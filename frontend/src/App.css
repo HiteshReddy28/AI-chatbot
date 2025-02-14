@@ -1,45 +1,57 @@
-/* General Navbar Styling */
 .navbar {
-  background-color: #f8f9fa; /* Light gray background */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: #0033cc;
+  color: white;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+}
+
+.nav-links li {
+  margin: 0 15px;
+}
+
+.nav-links a {
+  color: white;
+  text-decoration: none;
+}
+
+.footer {
+  background: #f1f1f1;
+  padding: 15px;
+  text-align: center;
+  font-size: 14px;
+}
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 50px;
+  background: linear-gradient(to right, #0033cc, #007bff);
+  color: white;
+  height: 100rem;
+}
+
+.hero-content {
+  max-width: 50%;
+  height: 100%;
+}
+
+.cta-button {
+  background: red;
+  color: white;
   padding: 10px 20px;
-  border-bottom: 2px solid #ddd;
-}
-
-/* Navbar Brand */
-.navbar-brand {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #333;
-}
-
-.navbar-brand:hover {
-  color: #007bff;
-}
-
-/* Navbar Toggler Button */
-.navbar-toggler {
   border: none;
-  outline: none;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 5px;
 }
 
-/* Navbar Links */
-.navbar-nav .nav-item {
-  padding: 0 15px;
-}
-
-.navbar-nav .nav-item.active {
-  font-weight: bold;
-  color: #007bff;
-}
-
-/* Responsive Navbar */
-@media (max-width: 768px) {
-  .navbar-nav {
-      text-align: center;
-  }
-
-  .navbar-nav .nav-item {
-      display: block;
-      padding: 10px 0;
-  }
+.hero-image img {
+  width: 250px;
 }

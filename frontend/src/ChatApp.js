@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 
-const ChatApp = () => {
+const ChatApp = () => { 
+  console.log("hello");  
   const [messages, setMessages] = useState([]); // Stores all messages
   const [input, setInput] = useState(""); // Tracks the user's input
   const [loading, setLoading] = useState(false); // Indicates when the LLM is responding
