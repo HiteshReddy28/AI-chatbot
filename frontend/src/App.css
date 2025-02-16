@@ -1,3 +1,12 @@
+.root{
+  min-height: 100vh;
+}
+.logo{
+  padding-left: 20px;
+}
+.logo:hover{
+  color: #FE0000;
+}
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -20,38 +29,55 @@
   color: white;
   text-decoration: none;
 }
-
+.nav-links a:hover{
+  color:#FE0000;
+}
 .footer {
   background: #f1f1f1;
   padding: 15px;
   text-align: center;
   font-size: 14px;
 }
+
 .hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 50px;
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  gap: 20px; 
+  padding: 40px; 
   background: linear-gradient(to right, #0033cc, #007bff);
   color: white;
-  height: 100rem;
+  height: 100vh;
 }
 
+.hero-head{
+  font-size: 60px;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  font-weight: bold;  
+}
+.Design{
+  color: #FE0000;
+}
 .hero-content {
+  flex: 0.6; 
   max-width: 50%;
-  height: 100%;
+}
+
+.hero-image {
+  flex: 0.4; 
+}
+
+.hero-image img {
+  max-width: 100%; 
+  height: auto; 
 }
 
 .cta-button {
-  background: red;
+  background: #FE0000;
   color: white;
   padding: 10px 20px;
   border: none;
   cursor: pointer;
   font-size: 16px;
-  border-radius: 5px;
-}
-
-.hero-image img {
-  width: 250px;
+  border-radius: 10px;
 }
