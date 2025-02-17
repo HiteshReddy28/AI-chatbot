@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import "./App.css";
 import { motion } from "framer-motion";
+import Footer from './footer';
+// import bot from "./public/Bot.png";
 
 function Mainpage(){
     const navigate = useNavigate();
@@ -18,7 +20,8 @@ function Mainpage(){
                 <button className="cta-button" onClick={handleClick}>Get Started</button>
             </div>
             <div className="hero-image">
-                <img src="" alt="Chatbot" />
+                <img src='/Bot.png' alt="Chatbot" />
+                <Footer/>
             </div>
           </section>
         </>

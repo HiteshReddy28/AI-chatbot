@@ -12,7 +12,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  background: #0033cc;
+  background: #002768;
   color: white;
 }
 
@@ -45,7 +45,7 @@
   justify-content: space-between; 
   gap: 20px; 
   padding: 40px; 
-  background: linear-gradient(to right, #0033cc, #007bff);
+  background: linear-gradient(to right, #002768, #024389);
   color: white;
   height: 100vh;
 }
@@ -68,7 +68,7 @@
 }
 
 .hero-image img {
-  max-width: 100%; 
+  width: auto;
   height: auto; 
 }
 

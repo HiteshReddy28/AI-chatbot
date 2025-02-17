@@ -1,13 +1,16 @@
 .chatapp-container{
-    display: flex;
-    height: 100vh;
-    background-color: blue;
+    display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  gap: 20px; 
+  padding: 40px; 
+  color: #002768;
+  height: 100vh;
 }
 .chatapp-left{
-    width: 30%;
-    background-color: red;
+    flex: 0.2;
+    border: 1px solid #ddd;
 }
 .chatapp-right{
-    width: 70%;
-    background-color: aquamarine;
+    flex: 0.8;
 }

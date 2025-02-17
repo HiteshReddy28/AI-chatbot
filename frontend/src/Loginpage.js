@@ -42,7 +42,7 @@ const Loginform = () => {
 
   return (
     <div className="login-form">
-      <h2>Login</h2>
+      <h2>Admin Login</h2>
       <form onSubmit={handleSubmit(onSubmit)}>
         <div>
           <label>Email:</label>
