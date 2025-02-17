@@ -1,45 +1,83 @@
-/* General Navbar Styling */
+.root{
+  min-height: 100vh;
+}
+.logo{
+  padding-left: 20px;
+}
+.logo:hover{
+  color: #FE0000;
+}
 .navbar {
-  background-color: #f8f9fa; /* Light gray background */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: #0033cc;
+  color: white;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+}
+
+.nav-links li {
+  margin: 0 15px;
+}
+
+.nav-links a {
+  color: white;
+  text-decoration: none;
+}
+.nav-links a:hover{
+  color:#FE0000;
+}
+.footer {
+  background: #f1f1f1;
+  padding: 15px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.hero {
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  gap: 20px; 
+  padding: 40px; 
+  background: linear-gradient(to right, #0033cc, #007bff);
+  color: white;
+  height: 100vh;
+}
+
+.hero-head{
+  font-size: 60px;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  font-weight: bold;  
+}
+.Design{
+  color: #FE0000;
+}
+.hero-content {
+  flex: 0.6; 
+  max-width: 50%;
+}
+
+.hero-image {
+  flex: 0.4; 
+}
+
+.hero-image img {
+  max-width: 100%; 
+  height: auto; 
+}
+
+.cta-button {
+  background: #FE0000;
+  color: white;
   padding: 10px 20px;
-  border-bottom: 2px solid #ddd;
-}
-
-/* Navbar Brand */
-.navbar-brand {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #333;
-}
-
-.navbar-brand:hover {
-  color: #007bff;
-}
-
-/* Navbar Toggler Button */
-.navbar-toggler {
   border: none;
-  outline: none;
-}
-
-/* Navbar Links */
-.navbar-nav .nav-item {
-  padding: 0 15px;
-}
-
-.navbar-nav .nav-item.active {
-  font-weight: bold;
-  color: #007bff;
-}
-
-/* Responsive Navbar */
-@media (max-width: 768px) {
-  .navbar-nav {
-      text-align: center;
-  }
-
-  .navbar-nav .nav-item {
-      display: block;
-      padding: 10px 0;
-  }
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 10px;
 }

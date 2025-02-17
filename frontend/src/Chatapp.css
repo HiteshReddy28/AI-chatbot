@@ -1,0 +1,13 @@
+.chatapp-container{
+    display: flex;
+    height: 100vh;
+    background-color: blue;
+}
+.chatapp-left{
+    width: 30%;
+    background-color: red;
+}
+.chatapp-right{
+    width: 70%;
+    background-color: aquamarine;
+}
