@@ -5,6 +5,7 @@ import './index.css';
 import App from './App';
 import ChatApp from './ChatApp';
 import Login from './login';
+import Signup from './Signup';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 
@@ -18,6 +19,7 @@ root.render(
           <Route path="/" element={<App/>} />
           <Route path="/ChatApp" element={<ChatApp/>} />
           <Route path="/login" element ={<Login/>}/>
+          <Route path="/Signup" element={<Signup />} />
         </Routes>
       </div>
     </Router>
