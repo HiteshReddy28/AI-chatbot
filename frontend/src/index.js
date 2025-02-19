@@ -7,18 +7,17 @@ import ChatApp from './ChatApp';
 import Login from './login';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import ChatInterface from './chatinterface';
+import ChatInput from './chatinput';
 
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-< HEAD/>
-
     <Router>
       <div>
         <Routes>
           <Route path="/" element={<App/>} />
-          <Route path="/ChatApp" element={<ChatApp/>} />
+          <Route path="/ChatApp" element={< ChatInterface />} />
           <Route path="/login" element ={<Login/>}/>
         </Routes>
       </div>
