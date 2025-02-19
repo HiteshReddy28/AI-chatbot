@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import "./App.css";
 import { motion } from "framer-motion";
 import Footer from './footer';
+import Navbar from './navbar';
 // import bot from "./public/Bot.png";
 
 function Mainpage(){
@@ -21,9 +22,12 @@ function Mainpage(){
             </div>
             <div className="hero-image">
                 <img src='/Bot.png' alt="Chatbot" />
-                <Footer/>
+                    <div className="footer" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
+                        <p className='para'>Cookie Policy</p>
+                        <p className='para'>2025 Cognute, All Rights Reserved</p>
+                    </div>
             </div>
-          </section>
+            </section>
         </>
 
     );
