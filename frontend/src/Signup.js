@@ -4,7 +4,10 @@ import { FaApple } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./Signup.css";  
-import robotImage from "./robot.png";  
+import robotImage from "./robot.png"; 
+import Navbar from './navbar';
+import Footer from './footer';
+
 
 const Signup = () => {
   console.log("Signup Component is Rendering");  // Debugging log
@@ -46,6 +49,8 @@ const Signup = () => {
   };
 
   return (
+    <>
+      <Navbar /> 
     <div className="signup-container">
       {/* Left Side - Chatbot Image */}
       <div className="signup-left">
@@ -136,6 +141,8 @@ const Signup = () => {
         </div>
       </div>
     </div>
+    <Footer/>
+  </>
   );
 };
 
