@@ -1,4 +1,5 @@
 import ChatBot from "./Chatbot";
+import ChatInterface from "./chatinterface";
 
 function ChatApp(){
     return (
@@ -8,7 +9,7 @@ function ChatApp(){
 
             </div>
             <div className="chatapp-right">
-                <ChatBot/>
+                <ChatInterface/>
             </div>
         </div>
         

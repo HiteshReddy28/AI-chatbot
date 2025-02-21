@@ -5,8 +5,11 @@ import './index.css';
 import App from './App';
 import ChatApp from './ChatApp';
 import Login from './login';
+import Signup from './Signup';
 import 'bootstrap/dist/css/bootstrap.min.css';
-
+import ChatInterface from './chatinterface';
+import ChatInput from './chatinput';
+import Test from './ApiTest';
 
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -15,9 +18,10 @@ root.render(
     <Router>
       <div>
         <Routes>
-          <Route path="/" element={<App/>} />
-          <Route path="/ChatApp" element={<ChatApp/>} />
+          <Route path="/" element={<Test/>} />
+          <Route path="/ChatApp" element={< ChatInterface />} />
           <Route path="/login" element ={<Login/>}/>
+          <Route path="/Signup" element={<Signup />} />
         </Routes>
       </div>
     </Router>

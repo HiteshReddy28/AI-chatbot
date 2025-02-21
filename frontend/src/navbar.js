@@ -1,5 +1,8 @@
 import React from "react";
 import "./App.css";
+import { Link } from "react-router-dom";
+
+
 const Navbar = () => {
   return (
     <nav className="navbar">
@@ -9,6 +12,11 @@ const Navbar = () => {
         <li><a href="#about">About</a></li>
         <li><a href="#services">Services</a></li>
         <li><a href="#contact">Contact Us</a></li>
+        <li>
+          <Link to="/signup" className="signup-btn">
+            Sign Up
+          </Link>
+        </li>
       </ul>
     </nav>
   );
