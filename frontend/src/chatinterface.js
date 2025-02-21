@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Settings, RefreshCw, ArrowLeft, Send, Paperclip, Image } from 'lucide-react';
+import { Navigate } from 'react-router';
 
 const ChatInterface = ({ onBackClick }) => {
   const [inputMessage, setInputMessage] = useState('');
@@ -20,7 +21,7 @@ const ChatInterface = ({ onBackClick }) => {
     'What are Debt-to-Income (DTI)?':
       "Debt-to-Income (DTI) ratio is a financial measure that compares your monthly debt payments to your monthly gross income. It's calculated by dividing your total monthly debt payments by your monthly gross income. A lower DTI ratio is generally better for loan approval.",
   };
-
+  
   // Default response for undefined queries
   const defaultResponse = "I understand your question. Let me help you with that. Could you please provide more specific details about your inquiry?";
 
@@ -73,7 +74,7 @@ const ChatInterface = ({ onBackClick }) => {
             <button className="w-full bg-blue-600 text-white rounded-full py-2 px-4 hover:bg-blue-700 transition-colors">
               Login
             </button>
-            <button className="w-full border border-gray-300 rounded-full py-2 px-4 hover:border-blue-600 hover:text-blue-600 transition-colors">
+            <button className="w-full border border-gray-300 rounded-full py-2 px-4 hover:border-blue-600 hover:text-blue-600 transition-colors" onClick = {()=>{Navigate("/Signup")}}> 
               Sign Up
             </button>
             <p className="text-sm text-gray-600">Sign-in to save your conversation</p>

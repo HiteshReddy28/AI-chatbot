@@ -5,7 +5,7 @@ const Footer = () => {
   return (
     <footer className="footer">
       <p>Cookie Policy</p>
-      <p>2025 Cognute, All Rights Reserved</p>
+      <p>2025 Cognute Inc, All Rights Reserved</p>
     </footer>
   );
 };
