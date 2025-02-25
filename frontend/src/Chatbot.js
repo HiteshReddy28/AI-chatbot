@@ -1,40 +1,48 @@
 import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
 
 const ChatBot = () => { 
-  console.log("hello");  
+  console.log("Chatbot Component Loaded");  
+
   const [messages, setMessages] = useState([]); // Stores all messages
   const [input, setInput] = useState(""); // Tracks the user's input
   const [loading, setLoading] = useState(false); // Indicates when the LLM is responding
   const chatEndRef = useRef(null); 
+
+  // FastAPI Backend URL
+  const API_URL = "http://localhost:8000/chat";  
+
+  // Send Message to FastAPI Backend
   const sendMessageToLLM = async (userMessage) => {
     setLoading(true);
     try {
-      
-      const response = await new Promise((resolve) =>
-        setTimeout(() => resolve(`LLM Response to: "${userMessage}"`), 2000)
-      );
+      const response = await axios.post(API_URL, { message: userMessage });
+
+      // Append LLM Response to Chat
       setMessages((prevMessages) => [
         ...prevMessages,
-        { sender: "bot", text: response },
+        { sender: "bot", text: response.data.response },
       ]);
     } catch (error) {
+      console.error("Error communicating with LLaMA backend:", error);
       setMessages((prevMessages) => [
         ...prevMessages,
-        { sender: "bot", text: "Error: Unable to get a response" },
+        { sender: "bot", text: "Error: Unable to get a response from LLaMA" },
       ]);
     }
     setLoading(false);
   };
 
-
+  // Handle Sending Message
   const handleSendMessage = () => {
     if (input.trim() === "") return;
-    setMessages([...messages, { sender: "user", text: input }]);
-    sendMessageToLLM(input); // Call the LLM for response
-    setInput(""); // Clear the input
+    
+    setMessages([...messages, { sender: "user", text: input }]); // Show user message
+    sendMessageToLLM(input); // Call the backend
+    setInput(""); // Clear the input field
   };
 
-
+  // Scroll to the latest message
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
@@ -95,3 +103,4 @@ const ChatBot = () => {
 };
 
 export default ChatBot;
+
