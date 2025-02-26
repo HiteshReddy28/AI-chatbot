@@ -7,8 +7,12 @@
     width: 50%;
     background: linear-gradient(to right, #0033cc, #007bff);
     color: white;
+    padding-left: 100px;
 }
-
+.login-left img{
+    width: auto;
+    height: auto;
+}
 .login-right{
     align-items: center;
    padding-left: 10rem;

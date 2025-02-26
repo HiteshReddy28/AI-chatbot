@@ -1,13 +1,343 @@
-.chatapp-container{
-    display: flex;
+/* ChatInterface.css */
+.chat-container {
+    min-height: 100vh;
+    background-color: white;
+    position: relative;
+  }
+  
+  /* Sidebar Styles */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 16rem;
     height: 100vh;
-    background-color: blue;
-}
-.chatapp-left{
-    width: 30%;
-    background-color: red;
-}
-.chatapp-right{
-    width: 70%;
-    background-color: aquamarine;
-}
+    border-right: 1px solid #e5e7eb;
+    background-color: white;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .back-button {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-right: 0.5rem;
+    cursor: pointer;
+    color: #4b5563;
+    transition: color 0.2s ease;
+  }
+  
+  .back-button:hover {
+    color: #2563eb;
+  }
+  
+  .app-title {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 700;
+    color: #1e3a8a;
+  }
+  
+  /* Auth Button Styles */
+  .auth-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  
+  .login-btn {
+    width: 100%;
+    background-color: #ec2913;
+    color: white;
+    border-radius: 9999px;
+    padding: 0.5rem 1rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .login-btn:hover {
+    background-color: #1d4ed8;
+  }
+  
+  .signup-btn {
+    width: 100%;
+    background-color: white;
+    color: #374151;
+    border-radius: 9999px;
+    padding: 0.5rem 1rem;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .signup-btn:hover {
+    border-color: #2563eb;
+    color: #2563eb;
+  }
+  
+  .auth-note {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: #4b5563;
+    text-align: center;
+  }
+  
+  /* Navigation Styles */
+  .nav-item {
+    display: flex;
+    align-items: center;
+    color: #4b5563;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+  }
+  
+  .nav-item:hover {
+    color: #2563eb;
+    background-color: #f3f4f6;
+  }
+  
+  .nav-icon {
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+  }
+  
+  /* Main Content Styles */
+  .main-content {
+    margin-left: 16rem;
+    padding: 2rem;
+  }
+  
+  .chat-wrapper {
+    max-width: 48rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  /* Prompt Section Styles */
+  .prompt-header {
+    margin-bottom: 2rem;
+  }
+  
+  .prompt-header h2 {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  
+  .prompt-header h3 {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+  
+  .prompt-subtext {
+    color: #6b7280;
+    font-size: 1rem;
+  }
+  
+  .prompt-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  @media (min-width: 768px) {
+    .prompt-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .prompt-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  
+  .prompt-button {
+    padding: 1rem;
+    text-align: center;
+    border: 1px solid #e5e7eb;
+    background-color: white;
+    border-radius: 1rem;
+    color: #1f2937;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .prompt-button:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Message Styles */
+  .message-container {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+  }
+  
+  .message-row {
+    display: flex;
+  }
+  
+  .message-row.user {
+    justify-content: flex-end;
+  }
+  
+  .message-row.bot {
+    justify-content: flex-start;
+  }
+  
+  .message-bubble {
+    max-width: 70%;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    position: relative;
+  }
+  
+  .user-message {
+    background-color: #2563eb;
+    color: white;
+  }
+  .user-message:hover{
+    background-color: #ec2913;
+  }
+  
+  .bot-message {
+    background-color: #f3f4f6;
+    color: #1f2937;
+  }
+  
+  .message-time {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    display: block;
+    margin-top: 0.25rem;
+  }
+  
+  /* Input Section Styles */
+  .input-container {
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  
+  .input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .message-input {
+    flex: 1;
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid #e5e7eb;
+    outline: none;
+    transition: border-color 0.2s ease;
+  }
+  
+  .message-input:focus {
+    border-color: #3b82f6;
+  }
+  
+  .send-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  .online-status {
+    color: #2563eb;
+    font-weight: 500;
+  }
+  
+  .send-button {
+    background-color: #2563eb;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 9999px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .send-button:hover {
+    background-color: #1d4ed8;
+  }
+  
+  .send-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  
+  /* Attachment Styles */
+  .attachment-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .attach-button,
+  .image-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: white;
+    color: #2563eb;
+    border-radius: 9999px;
+    padding: 0.5rem 1rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .attach-button:hover,
+  .image-button:hover {
+    background-color: #eff6ff;
+  }
+  
+  .attach-icon,
+  .image-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+  
+  /* Refresh Prompts */
+  .refresh-prompts {
+    display: flex;
+    align-items: center;
+    color: #6b7280;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+  
+  .refresh-prompts:hover {
+    color: #2563eb;
+  }
+  
+  .refresh-icon {
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+  }

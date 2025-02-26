@@ -12,8 +12,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  background: #0033cc;
+  background: #002768;
   color: white;
+  opacity: 0.9;
 }
 
 .nav-links {
@@ -33,9 +34,11 @@
   color:#FE0000;
 }
 .footer {
+  
   background: #f1f1f1;
   padding: 15px;
   text-align: center;
+  justify-content: center;
   font-size: 14px;
 }
 
@@ -44,10 +47,12 @@
   align-items: center; 
   justify-content: space-between; 
   gap: 20px; 
-  padding: 40px; 
-  background: linear-gradient(to right, #0033cc, #007bff);
+  padding-top: 40px;  
+  padding-left: 40px;
+  background: linear-gradient(to top, #002768, #004DCE);
   color: white;
   height: 100vh;
+  
 }
 
 .hero-head{
@@ -65,10 +70,13 @@
 
 .hero-image {
   flex: 0.4; 
+  color: black;
 }
 
 .hero-image img {
-  max-width: 100%; 
+  max-width: 100rem;
+  max-height: 37rem;
+  width: auto;
   height: auto; 
 }
 
@@ -80,4 +88,8 @@
   cursor: pointer;
   font-size: 16px;
   border-radius: 10px;
+}
+
+.para{
+  font-size: 16px;
 }

@@ -1,6 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import "./App.css";
 import { motion } from "framer-motion";
+import Footer from './footer';
+import Navbar from './navbar';
+
 
 function Mainpage(){
     const navigate = useNavigate();
@@ -18,9 +21,13 @@ function Mainpage(){
                 <button className="cta-button" onClick={handleClick}>Get Started</button>
             </div>
             <div className="hero-image">
-                <img src="" alt="Chatbot" />
+                <img src='/Bot.png' alt="Chatbot" />
+                    <div className="footer" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
+                        <p className='para'>Cookie Policy</p>
+                        <p className='para'>2025 Cognute, All Rights Reserved</p>
+                    </div>
             </div>
-          </section>
+            </section>
         </>
 
     );
