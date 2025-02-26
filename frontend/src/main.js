@@ -3,7 +3,7 @@ import "./App.css";
 import { motion } from "framer-motion";
 import Footer from './footer';
 import Navbar from './navbar';
-// import bot from "./public/Bot.png";
+
 
 function Mainpage(){
     const navigate = useNavigate();
