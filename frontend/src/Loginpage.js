@@ -1,75 +1,99 @@
 import React, { useState } from "react";
-import { useForm } from "react-hook-form";
-import "./login.css"
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import "./login.css";
 
 const Loginform = () => {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm();
-  
+  const navigate = useNavigate();
+  const [user, setUser] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
-  const onSubmit = async (data) => {
-    setLoading(true);
-    setError(null);
+  const handleChange = (e) => {
+    setUser({ ...user, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
 
     try {
-      const response = await fetch("http://localhost:5000/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+        const response = await fetch("http://localhost:8000/api/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+                username: user.email,
+                password: user.password,
+            }),
+        });
 
-      const result = await response.json();
+        const result = await response.json();
 
-      if (response.ok) {
-        alert("Login successful!");
-        
-      } else {
-        setError(result.message || "Login failed. Please try again.");
-      }
+        if (response.ok) {
+            localStorage.setItem("token", result.access_token);
+
+            
+            const userInfoResponse = await fetch(`http://localhost:8000/api/userinfo`, {
+                method: "GET",
+                headers: { "Authorization": `Bearer ${result.access_token}` },
+            });
+
+            if (userInfoResponse.ok) {
+                const userInfo = await userInfoResponse.json();
+                console.log("Fetched client_id:", userInfo.client_id);  
+                localStorage.setItem("client_id", userInfo.client_id);
+            } else {
+                console.error("Failed to fetch client ID");
+            }
+
+            alert("Login successful!");
+            navigate("/ChatApp");  
+        } else {
+            setError(result.detail || "Invalid credentials.");
+        }
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+        setError("Login failed. Please try again.");
     }
+};
 
-    setLoading(false);
-  };
+
+
 
   return (
     <div className="login-form">
-      <h2>Admin Login</h2>
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <h2>Login</h2>
+      {error && <p className="error">{error}</p>}
+      <form onSubmit={handleSubmit}>
         <div>
           <label>Email:</label>
           <input
             type="email"
-            {...register("email", { required: "Email is required" })}
+            name="email"
+            value={user.email}
+            onChange={handleChange}
+            required
           />
-          {errors.email && <p className="error">{errors.email.message}</p>}
         </div>
 
         <div>
           <label>Password:</label>
           <input
             type="password"
-            {...register("password", { required: "Password is required" })}
+            name="password"
+            value={user.password}
+            onChange={handleChange}
+            required
           />
-          {errors.password && <p className="error">{errors.password.message}</p>}
         </div>
-        <br/>
+        <br />
         <button type="submit" disabled={loading}>
           {loading ? "Logging in..." : "Login"}
         </button>
-
-        {error && <p className="error">{error}</p>}
       </form>
     </div>
   );
 };
 
 export default Loginform;
+
+

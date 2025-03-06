@@ -1,29 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Settings, RefreshCw, ArrowLeft, Send, Paperclip, Image } from 'lucide-react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import './Chatapp.css'
-import Signup from './Signup';
-
+import { useNavigate } from 'react-router-dom';
+import './Chatapp.css';
+import Navbar from "./navbar.js"; 
 
 const ChatInterface = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [messages, setMessages] = useState([]);
-  const [showPrompts, setShowPrompts] = useState(true);
-  
-  
   const navigate = useNavigate();
-    function onBackClick(){
-        navigate('/');
-    }
-    
-    function handleClick(){
-        navigate("/Signup");
-    }
-
-    function loginClick(){
-      navigate('/Login');
-    }
-  
 
   const commonPrompts = [
     'Can I refinance my existing loan?',
@@ -31,11 +15,103 @@ const ChatInterface = () => {
     'How is my financial risk assessed for a loan?',
     'What are Debt-to-Income (DTI)?'
   ];
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const client_id = localStorage.getItem("client_id");
+
+    if (!token || !client_id) {
+      alert("You must be logged in to access the chatbot.");
+      navigate("/login");
+    } else {
+      fetchChatHistory(client_id, token);
+    }
+  }, [navigate]);
+
+  const storeChatMessage = async (sender, message) => {
+    const client_id = localStorage.getItem("client_id");
+    const token = localStorage.getItem("token");
+
+    if (!client_id || !token) {
+      console.error("User is not authenticated.");
+      return;
+    }
+
+    try {
+      await fetch("http://localhost:8000/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ client_id, sender, message }),
+      });
+    } catch (error) {
+      console.error("Error storing chat message:", error);
+    }
+  };
+
+  const fetchChatHistory = async (client_id, token) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/chat/${client_id}`, {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+
+      const data = await response.json();
+      if (data.chat_history) {
+        setMessages(data.chat_history.map((msg) => ({
+          text: msg.message,
+          sender: msg.sender,
+          timestamp: new Date(msg.timestamp).toLocaleTimeString(),
+        })));
+      }
+    } catch (error) {
+      console.error("Error fetching chat history:", error);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (inputMessage.trim()) {
+      try {
+        const userMessage = {
+          text: inputMessage,
+          sender: "user",
+          timestamp: new Date().toLocaleTimeString(),
+        };
+
+        setMessages((prev) => [...prev, userMessage]);
+        storeChatMessage("user", inputMessage);
+        setInputMessage('');
+
+        const response = await callOllamaAPI(inputMessage);
+
+        const botMessage = {
+          text: response.response,
+          sender: "bot",
+          timestamp: new Date().toLocaleTimeString(),
+        };
+
+        setMessages((prev) => [...prev, botMessage]);
+        storeChatMessage("bot", response.response);
+      } catch (error) {
+        console.error("Error:", error);
+        const errorMessage = {
+          text: "Sorry, I encountered an error. Please try again.",
+          sender: "bot",
+          timestamp: new Date().toLocaleTimeString(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      }
+    }
+  };
+
   const callOllamaAPI = async (prompt) => {
     const response = await fetch('http://localhost:8000/api/ollama', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        "Authorization": `Bearer ${localStorage.getItem("token")}`,  
       },
       body: JSON.stringify({ prompt }),
     });
@@ -45,111 +121,55 @@ const ChatInterface = () => {
     }
 
     const data = await response.json();
-    console.log(data);
     return data;
-
-  };
-
-  const handleSendMessage = async () => {
-    
-    if (inputMessage.trim()) {
-      try {
-        const userMessage = {
-          text: inputMessage,
-          sender: 'user',
-          timestamp: new Date().toLocaleTimeString(),
-        };
-  
-        setMessages(prev => [...prev, userMessage]);
-        setInputMessage('');
-        setShowPrompts(false);
-  
-        const response = await callOllamaAPI(inputMessage);
-        
-        
-        const botMessage = {
-          text: response.response,
-          sender: 'bot',
-          timestamp: new Date().toLocaleTimeString(),
-        };
-  
-        setMessages(prev => [...prev, botMessage]);
-      } catch (error) {
-        console.error('Error:', error);
-        const errorMessage = {
-          text: 'Sorry, I encountered an error. Please try again.',
-          sender: 'bot',
-          timestamp: new Date().toLocaleTimeString(),
-        };
-        setMessages(prev => [...prev, errorMessage]);
-      }
-    }
   };
 
   return (
-    <div className="chat-container">
-      <div className="sidebar">
-        <div className="sidebar-content">
-          <div className="sidebar-header">
-            <ArrowLeft 
-              className="back-button" 
-              onClick={onBackClick} 
-            />
-            <h1 className="app-title">AI Negotiator.</h1>
-          </div>
+    <>
+      <Navbar />
+      <div className="chat-container">
+        <div className="sidebar">
+          <div className="sidebar-content">
+            <div className="sidebar-header">
+              <ArrowLeft className="back-button" onClick={() => navigate('/')} />
+              <h1 className="app-title">AI Negotiator.</h1>
+            </div>
 
-          <div className="auth-buttons">
-            <button className="login-btn" onClick={loginClick}>
-              Login
-            </button>
-            <button className="signup-btn" onClick={handleClick}>
-              Sign Up
-            </button>
-            <p className="auth-note">Sign-in to save your conversation</p>
-          </div>
+            <div className="history-button">
+              <RefreshCw className="history-icon" />
+              <span>Previous History</span>
+            </div>
 
-          <div className="history-button">
-            <RefreshCw className="history-icon" />
-            <span>Previous History</span>
-          </div>
-
-          <div className="settings-button">
-            <Settings className="settings-icon" />
-            <span>Settings</span>
+            <div className="settings-button">
+              <Settings className="settings-icon" />
+              <span>Settings</span>
+            </div>
           </div>
         </div>
-      </div>
-      
-      <div className="main-content">
-        <div className="chat-wrapper">
-          {showPrompts ? (
-            <>
-              <div className="prompt-header">
-                <h2>Hi there,</h2>
-                <h3>What would you like to know?</h3>
-                <p className="prompt-subtext">
-                  Start with one of most common prompts below or use your own to begin
-                </p>
-              </div>
+        
+        <div className="main-content">
+          <div className="chat-wrapper">
+            {/* ✅ Common Prompts are now always visible */}
+            <div className="prompt-header">
+              <h2>Hi there,</h2>
+              <h3>What would you like to know?</h3>
+              <p className="prompt-subtext">
+                Start with one of the most common prompts below or use your own to begin
+              </p>
+            </div>
 
-              <div className="prompt-grid">
-                {commonPrompts.map((prompt, index) => (
-                  <button
-                    key={index}
-                    className="prompt-button"
-                    onClick={() => setInputMessage(prompt)}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
+            <div className="prompt-grid">
+              {commonPrompts.map((prompt, index) => (
+                <button
+                  key={index}
+                  className="prompt-button"
+                  onClick={() => setInputMessage(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
 
-              <div className="refresh-prompts">
-                <RefreshCw className="refresh-icon" />
-                <span>Refresh Prompts</span>
-              </div>
-            </>
-          ) : (
             <div className="message-container">
               {messages.map((message, index) => (
                 <div
@@ -165,43 +185,43 @@ const ChatInterface = () => {
                 </div>
               ))}
             </div>
-          )}
 
-          <div className="input-container">
-            <div className="input-wrapper">
-              <input
-                type="text"
-                placeholder="Type here to start a conversation..."
-                className="message-input"
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              />
-              <div className="send-wrapper">
-                <span className="online-status">Online</span>
-                <button 
-                  className="send-button"
-                  onClick={handleSendMessage}
-                >
-                  <Send className="send-icon" />
+            <div className="input-container">
+              <div className="input-wrapper">
+                <input
+                  type="text"
+                  placeholder="Type here to start a conversation..."
+                  className="message-input"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                />
+                <div className="send-wrapper">
+                  <span className="online-status">Online</span>
+                  <button 
+                    className="send-button"
+                    onClick={handleSendMessage}
+                  >
+                    <Send className="send-icon" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="attachment-buttons">
+                <button className="attach-button">
+                  <Paperclip className="attach-icon" />
+                  Add Attachment
+                </button>
+                <button className="image-button">
+                  <Image className="image-icon" />
+                  Add Image
                 </button>
               </div>
-            </div>
-            
-            <div className="attachment-buttons">
-              <button className="attach-button">
-                <Paperclip className="attach-icon" />
-                Add Attachment
-              </button>
-              <button className="image-button">
-                <Image className="image-icon" />
-                Add Image
-              </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
