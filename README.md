@@ -42,16 +42,17 @@ Your database must be installed locally. Follow these steps:
 ### **2. Create Database & User**
 Run these SQL commands inside `psql`:
 ```sql
+-- Step 1: Create Database
 CREATE DATABASE ainegotiator;
+
+-- Step 2: Create User and Grant Permissions
 CREATE USER admin WITH ENCRYPTED PASSWORD 'yourpassword';
 GRANT ALL PRIVILEGES ON DATABASE ainegotiator TO admin;
-```
 
-### **3. Create Required Tables**
-Run the following inside **PostgreSQL** (`psql`):
-```sql
-\c ainegotiator;  -- Connect to the database
+-- Connect to the new database
+\c ainegotiator;
 
+-- Step 3: Create Users Table
 CREATE TABLE users (
     client_id SERIAL PRIMARY KEY,
     first_name VARCHAR(50),
@@ -62,18 +63,33 @@ CREATE TABLE users (
     loan_amount DECIMAL(10,2)
 );
 
+-- Step 4: Create Chat Sessions Table
 CREATE TABLE chat_sessions (
     session_id SERIAL PRIMARY KEY,
     client_id INT REFERENCES users(client_id) ON DELETE CASCADE,
     start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Step 5: Create Chat History Table
 CREATE TABLE chat_history (
     id SERIAL PRIMARY KEY,
     session_id INT REFERENCES chat_sessions(session_id) ON DELETE CASCADE,
     sender VARCHAR(10) CHECK (sender IN ('user', 'bot')),
     message TEXT NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Step 6: Create Repurposed Plans Table
+CREATE TABLE repurposed_plans (
+    plan_id SERIAL PRIMARY KEY,
+    client_id INT REFERENCES users(client_id) ON DELETE CASCADE,
+    plan_type VARCHAR(50),
+    loan_adjustment DECIMAL(10,2),
+    extension_cycles INT,
+    fee_waiver DECIMAL(5,2),
+    interest_waiver DECIMAL(5,2),
+    principal_waiver DECIMAL(5,2),
+    fixed_settlement DECIMAL(10,2)
 );
 ```
 
