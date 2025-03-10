@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, RefreshCw, ArrowLeft, Send, Paperclip, Image } from 'lucide-react';
+import { Settings, RefreshCw, ArrowLeft, Send, Paperclip, Image, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './Chatapp.css';
-import Navbar from "./navbar.js"; 
+import Navbar from "./navbar.js";
+
 
 const ChatInterface = () => {
   const [inputMessage, setInputMessage] = useState('');
@@ -27,6 +28,27 @@ const ChatInterface = () => {
       fetchChatHistory(client_id, token);
     }
   }, [navigate]);
+
+  const clearChatHistory = async () => {
+    const client_id = localStorage.getItem("client_id");
+    const token = localStorage.getItem("token");
+
+    if (!client_id || !token) {
+      console.error("User is not authenticated.");
+      return;
+    }
+
+    try {
+      await fetch(`http://localhost:8000/api/chat/clear/${client_id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      setMessages([]);
+      alert("Chat history cleared successfully.");
+    } catch (error) {
+      console.error("Error clearing chat history:", error);
+    }
+  };
 
   const storeChatMessage = async (sender, message) => {
     const client_id = localStorage.getItem("client_id");
@@ -84,16 +106,18 @@ const ChatInterface = () => {
         storeChatMessage("user", inputMessage);
         setInputMessage('');
 
-        const response = await callOllamaAPI(inputMessage);
+        const response = await callLlamaAPI(inputMessage);
 
-        const botMessage = {
-          text: response.response,
-          sender: "bot",
-          timestamp: new Date().toLocaleTimeString(),
-        };
+        if (response && response.negotiation_response) {
+          const botMessage = {
+            text: response.negotiation_response,
+            sender: "bot",
+            timestamp: new Date().toLocaleTimeString(),
+          };
 
-        setMessages((prev) => [...prev, botMessage]);
-        storeChatMessage("bot", response.response);
+          setMessages((prev) => [...prev, botMessage]);
+          storeChatMessage("bot", response.negotiation_response);
+        }
       } catch (error) {
         console.error("Error:", error);
         const errorMessage = {
@@ -106,22 +130,29 @@ const ChatInterface = () => {
     }
   };
 
-  const callOllamaAPI = async (prompt) => {
-    const response = await fetch('http://localhost:8000/api/ollama', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        "Authorization": `Bearer ${localStorage.getItem("token")}`,  
-      },
-      body: JSON.stringify({ prompt }),
-    });
+  const callLlamaAPI = async (prompt) => {
+    try {
+      const response = await fetch('http://localhost:8000/api/negotiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          client_id: localStorage.getItem("client_id"),
+          requested_changes: prompt
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error calling Llama API:", error);
+      return null;
     }
-
-    const data = await response.json();
-    return data;
   };
 
   return (
@@ -134,22 +165,24 @@ const ChatInterface = () => {
               <ArrowLeft className="back-button" onClick={() => navigate('/')} />
               <h1 className="app-title">AI Negotiator.</h1>
             </div>
-
             <div className="history-button">
               <RefreshCw className="history-icon" />
               <span>Previous History</span>
             </div>
-
             <div className="settings-button">
               <Settings className="settings-icon" />
               <span>Settings</span>
             </div>
+            <button className="clear-chat-button" onClick={clearChatHistory}>
+              <Trash2 className="clear-icon" /> Clear Chat
+            </button>     
+            
           </div>
         </div>
         
         <div className="main-content">
           <div className="chat-wrapper">
-            {/* ✅ Common Prompts are now always visible */}
+            {/* Common Prompts are now always visible */}
             <div className="prompt-header">
               <h2>Hi there,</h2>
               <h3>What would you like to know?</h3>
@@ -224,5 +257,4 @@ const ChatInterface = () => {
     </>
   );
 };
-
 export default ChatInterface;
