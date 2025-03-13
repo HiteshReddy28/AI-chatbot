@@ -11,6 +11,7 @@ from passlib.context import CryptContext
 from dotenv import load_dotenv
 from jose import JWTError
 from fastapi.middleware.cors import CORSMiddleware
+import re
 
 # Load environment variables
 load_dotenv()
@@ -322,6 +323,36 @@ class LoanNegotiationRequest(BaseModel):
     client_id: str
     requested_changes: str
 
+import re
+
+# AI Model Call
+def call_llama3(prompt: str):
+    headers = {
+        "Authorization": f"Bearer {TOGETHER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
+        "prompt": prompt,
+        "max_tokens": 400,  
+        "temperature": 0.6  
+    }
+
+    try:
+        response = requests.post(TOGETHER_API_URL, json=payload, headers=headers)
+        print("Llama API Response:", response.status_code, response.text)
+
+        if response.status_code == 200:
+            ai_response = response.json().get("choices")[0].get("text").strip()
+            return ai_response
+        else:
+            raise HTTPException(status_code=500, detail=f"Llama API error: {response.status_code}, {response.text}")
+
+    except Exception as e:
+        print(f"Error calling Llama API: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Llama API call failed: {str(e)}")
+
+
 @app.post("/api/negotiate")
 def negotiate_loan(request: LoanNegotiationRequest):
     try:
@@ -331,57 +362,110 @@ def negotiate_loan(request: LoanNegotiationRequest):
 
         # Fetch available repurposed plans
         repurposed_plans = get_repurposed_plans(request.client_id)
-        
-        # Construct AI negotiation prompt
-        negotiation_prompt = (
-    "You are a highly skilled loan officer at a leading financial institution in the USA. "
-    "Your job is to assist clients in understanding and adjusting their loan terms professionally and logically. "
-    
-    "DO NOT generate or make up loan details. You must only reference data from the stored client information "
-    "and officially available repurposed loan plans. If a client asks about loan details, retrieve them first "
-    "before responding. If they ask about repayment options, present ONE plan at a time based on the order of stored plans. "
-    
-    "Do NOT assume what the client needs. Always ask clarifying questions before offering solutions. "
-    "Ensure your responses are dynamic and sound human-like—DO NOT list steps like 'Step 1, Step 2'. "
-    
-    f"The client currently has a loan of ${loan_amount:.2f}. "
-    f"The client has mentioned: '{request.requested_changes}'. "
-    
-    "If the client cannot pay, ask them about their financial situation before offering an option. "
-    "If they reject a plan, move to the next one without repeating unnecessary details. "
-    
-    "Keep responses professional, warm, and focused on finding the best possible solution."
-)
+        if not repurposed_plans:
+            raise HTTPException(status_code=404, detail="No available plans for this client.")
+
+        # Select the first plan for negotiation
+        selected_plan = repurposed_plans[0]
 
 
-        
-        # Call AI Model
-        headers = {"Authorization": f"Bearer {os.getenv('TOGETHER_API_KEY')}", "Content-Type": "application/json"}
-        payload = {
-            "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
-            "prompt": negotiation_prompt,
-            "max_tokens": 500,
-            "temperature": 0.7
-        }
-        response = requests.post("https://api.together.xyz/v1/completions", json=payload, headers=headers)
-        
-        if response.status_code == 200:
-            ai_response = response.json().get("choices")[0].get("text").strip()
-        else:
-            raise HTTPException(status_code=500, detail="AI Model call failed")
-        
-        # Store response in chat history
+        # Identify user intent
+        #user_message = request.requested_changes.strip().lower()
+        #keywords_refinance = ["refinance", "loan modification", "change loan terms"]
+        #keywords_payment_help = ["help paying", "lower payment", "reduce payment", "can't pay"]
+        #keywords_info = ["balance", "how much", "loan amount"]
+
+        #XML-based AI negotiation prompt
+        negotiation_prompt = f"""
+<negotiation>
+    <loan_officer>
+        <role>You are a professional loan officer at a top financial institution in the USA.</role>
+        <instructions>
+            - Start with a **greeting** and confirm the client's request.
+            - **DO NOT offer another plan unless the client explicitly rejects the current one.**
+            - If the client **confirms a plan**, acknowledge it and **finalize the negotiation**.
+            - The **final response** should be enclosed in `<message_to_client></message_to_client>`.
+        </instructions>
+    </loan_officer>
+
+    <client>
+        <id>{request.client_id}</id>
+        <loan_amount>${loan_amount:.2f}</loan_amount>
+        <request>{request.requested_changes}</request>
+    </client>
+
+    <conversation>
+        <greeting>Hello {client_data["first_name"]}, I’m happy to assist you today. How can I help with your loan of ${loan_amount:.2f}?</greeting>
+        <negotiation_step>Let's discuss your situation. Can you tell me what challenges you're facing with your loan?</negotiation_step>
+    </conversation>
+
+    <recommended_plan>
+        <plan_number>{selected_plan["plan_number"]}</plan_number>
+        <loan_adjustment>${selected_plan["loan_adjustment"]}</loan_adjustment>
+        <extension_cycles>{selected_plan["extension_cycles"]}</extension_cycles>
+        <fee_waiver>{selected_plan["fee_waiver"]}%</fee_waiver>
+        <interest_waiver>{selected_plan["interest_waiver"]}%</interest_waiver>
+        <principal_waiver>{selected_plan["principal_waiver"]}%</principal_waiver>
+        <fixed_settlement>${selected_plan["fixed_settlement"]}</fixed_settlement>
+    </recommended_plan>
+
+    <client_confirmation>
+        - If the client **accepts** the plan, respond with:  
+          **"Thank you for confirming. We will now proceed with finalizing your agreement."**
+        - If the client **rejects**, DO NOT suggest a new plan unless they explicitly request another option.
+    </client_confirmation>
+
+    <message_to_client>
+        AI-GENERATED RESPONSE HERE
+    </message_to_client>
+</negotiation>
+"""
+
+        # Get AI-generated response
+        ai_response = call_llama3(negotiation_prompt)
+
+        # Extract only the message from AI response
+        final_response = extract_final_response(ai_response)
+
+        if not final_response or final_response.strip() == "":
+            final_response = "I'm sorry, but I couldn't process your request. Can you clarify?"
+
+        # Store the chat history in DB
         cursor.execute(
             "INSERT INTO chat_history (client_id, sender, message) VALUES (%s, %s, %s)",
-            (request.client_id, "bot", ai_response)
+            (request.client_id, "bot", final_response)
         )
         conn.commit()
-        
-        return {"negotiation_response": ai_response}
-    
+
+        return {"negotiation_response": final_response}
+
     except Exception as e:
         print(f"Error in /api/negotiate: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Extract AI Response
+def extract_final_response(ai_response):
+    """
+    Extracts only the <message_to_client> section from the AI response.
+    If no specific message is found, returns a default response.
+    """
+    try:
+        # Ensure response is in string format
+        if not isinstance(ai_response, str):
+            raise ValueError("AI response is not a string.")
+
+        # Extract the message inside <message_to_client> tags
+        match = re.search(r'<message_to_client>(.*?)</message_to_client>', ai_response, re.DOTALL)
+
+        if match:
+            return match.group(1).strip()
+
+        return "I'm sorry, but I couldn't process your request. Can you clarify?"
+    
+    except Exception as e:
+        print(f"Error extracting message: {str(e)}")
+        return "I'm sorry, but there was an error processing your request."
 
 
 if __name__ == "__main__":
