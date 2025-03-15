@@ -1,39 +1,46 @@
-import React, { useEffect } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 
 function ChatBot() {
-    const navigate = useNavigate();
-
-    const verifyUser = async () => {
-        const client_id = prompt("Enter your Client ID:");
-        const passcode = prompt("Enter your Passcode:");
-
-        try {
-            const response = await axios.post("http://localhost:8000/api/verify", { client_id, passcode });
-
-            if (response.data.message === "Access Granted") {
-                alert("Access granted! You may now use the chatbot.");
-            } else {
-                alert("Invalid credentials.");
-                navigate("/login");
-            }
-        } catch (error) {
-            alert("Verification failed.");
-            navigate("/login");
-        }
+  const [inputMessage, setInputMessage] = useState(""); 
+  const [input,setInput] = useState("");
+  useEffect(() => {
+    const loaddata = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/");
+        const data = await response.json();
+        setInputMessage(data.message); 
+        console.log(data.message); 
+      } catch (error) {
+        console.error("Error fetching data:", error); 
+      }
     };
+    loaddata();
 
-    useEffect(() => {
-        verifyUser();
-    }, []);
-
-    return (
-        <>  
-            <h1>Chatbot Interface</h1>
-            <p>You are now inside the chatbot.</p>
-        </>
-    );
+  }, []); 
+  const handleinput = (e)=>{
+    setInput(e.target.value);
+  }
+  const senddata = async () => {
+    const data = { todo: input,date: new Date().toISOString() };
+    const response =  await fetch("http://localhost:8000/api/todo",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          },
+        body: JSON.stringify(data),
+      }
+    )
+}
+  return (
+    <>
+      <h1>Hello </h1>
+      <label>
+        Enter Todo:<input type="text" value={input} name="myInput" onChange={handleinput} />
+      </label>
+      <button onClick={senddata}> submit</button>
+    </>
+  );
 }
 
 export default ChatBot;
