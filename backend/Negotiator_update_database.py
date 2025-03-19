@@ -14,6 +14,8 @@ from jose import JWTError
 from fastapi.middleware.cors import CORSMiddleware
 import xml.etree.ElementTree as ET
 import json
+import re
+from fastapi import HTTPException
 
 # Load environment variables
 load_dotenv()
@@ -554,6 +556,8 @@ def negotiate_with_ai(client_id, user_input):
         temperature=0.2,
     )
 
+    plan_fetched = False  # Ensure we fetch plans only ONCE
+
     while response.choices[0].message.content is None:
         functionname = response.choices[0].message.tool_calls[0].function.name
         arguments = json.loads(response.choices[0].message.tool_calls[0].function.arguments)
@@ -568,6 +572,10 @@ def negotiate_with_ai(client_id, user_input):
             function_response = f"<customer_details>{function_response}</customer_details>"
 
         elif functionname == "get_plans":
+            if plan_fetched:
+                raise HTTPException(status_code=500, detail="Infinite function call loop detected!")
+            
+            plan_fetched = True  # Prevent repeated plan fetching
             function_response = get_plans(client_id, arguments["priority"])
             function_response = f"<plans>{function_response}</plans>"
 
@@ -594,11 +602,94 @@ def negotiate_with_ai(client_id, user_input):
 
     return ai_response
 
-#Negotiator
+
+import re
+import xml.etree.ElementTree as ET
+from fastapi import HTTPException
+
+def extract_financial_updates(customer_content):
+    """
+    Extracts financial details such as new payment amount, loan adjustment, 
+    extension cycles, waivers, and settlement from AI response.
+
+    Args:
+        customer_content (str): AI response containing financial details.
+
+    Returns:
+        dict: Extracted financial updates or None if no financial changes were found.
+    """
+
+    extracted_values = {
+        "new_payment_amount": None,
+        "new_loan_amount": None,
+        "loan_adjustment": None,
+        "extension_cycles": None,
+        "fee_waiver": None,
+        "interest_waiver": None,
+        "principal_waiver": None,
+        "fixed_settlement": None
+    }
+
+    for line in customer_content.split("\n"):
+        # Extract new monthly payment
+        if "monthly payment" in line:
+            try:
+                extracted_values["new_payment_amount"] = float(re.search(r"\$([\d,]+\.?\d*)", line).group(1).replace(",", ""))
+            except (ValueError, AttributeError):
+                pass
+
+        # Extract new loan amount
+        elif "new loan amount" in line or "loan adjustment" in line:
+            try:
+                extracted_values["new_loan_amount"] = float(re.search(r"\$([\d,]+\.?\d*)", line).group(1).replace(",", ""))
+            except (ValueError, AttributeError):
+                pass
+
+        # Extract extension cycles
+        elif "extension" in line or "extended by" in line:
+            try:
+                extracted_values["extension_cycles"] = int(re.search(r"(\d+)\s*(cycles|months|years)?", line).group(1))
+            except (ValueError, AttributeError):
+                pass
+
+        # Extract fee waiver
+        elif "fee waiver" in line:
+            try:
+                extracted_values["fee_waiver"] = float(re.search(r"(\d+)%", line).group(1))
+            except (ValueError, AttributeError):
+                pass
+
+        # Extract interest waiver
+        elif "interest waiver" in line:
+            try:
+                extracted_values["interest_waiver"] = float(re.search(r"(\d+)%", line).group(1))
+            except (ValueError, AttributeError):
+                pass
+
+        # Extract principal waiver
+        elif "principal waiver" in line:
+            try:
+                extracted_values["principal_waiver"] = float(re.search(r"(\d+)%", line).group(1))
+            except (ValueError, AttributeError):
+                pass
+
+        # Extract fixed settlement amount
+        elif "fixed settlement" in line:
+            try:
+                extracted_values["fixed_settlement"] = float(re.search(r"\$([\d,]+\.?\d*)", line).group(1).replace(",", ""))
+            except (ValueError, AttributeError):
+                pass
+
+    #Return extracted values if at least one is found, otherwise return None
+    if any(value is not None for value in extracted_values.values()):
+        return extracted_values
+    else:
+        return None  # Indicating no financial negotiation happened
+
 @app.post("/api/negotiate")
 def negotiate_loan(request: LoanNegotiationRequest):
     try:
-        print("Received request:", request.dict())  # Debugging
+        print("Received request:", request.dict())
 
         client_id = str(request.client_id).strip()
         if not client_id:
@@ -607,12 +698,29 @@ def negotiate_loan(request: LoanNegotiationRequest):
         if not request.requested_changes or len(request.requested_changes.strip()) == 0:
             raise HTTPException(status_code=400, detail="Requested changes cannot be empty.")
 
-        
         ai_response = negotiate_with_ai(client_id, request.requested_changes)
 
         # Parse XML Response
         root = ET.fromstring(ai_response)
         customer_content = root.find('customer').text.strip()
+
+        # Extract all financial details
+        financial_updates = extract_financial_updates(customer_content)
+
+        #Only update the database if financial updates were extracted
+        if financial_updates:
+            update_customer_financials(
+                                 client_id,
+                                 new_payment_amount=financial_updates.get("new_payment_amount"),
+                                 new_loan_amount=financial_updates.get("new_loan_amount"),
+                                 loan_adjustment=financial_updates.get("loan_adjustment"),  
+                                 extension_cycles=financial_updates.get("extension_cycles"),
+                                 fee_waiver=financial_updates.get("fee_waiver"),
+                                 interest_waiver=financial_updates.get("interest_waiver"),
+                                 principal_waiver=financial_updates.get("principal_waiver"),
+                                 fixed_settlement=financial_updates.get("fixed_settlement")
+                                )
+
 
         # Store chat history
         cursor.execute(
@@ -627,7 +735,80 @@ def negotiate_loan(request: LoanNegotiationRequest):
         print(f"Error in /api/negotiate: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
+def update_customer_financials(client_id, new_payment_amount=None, new_loan_amount=None, loan_adjustment=None,
+                               extension_cycles=None, fee_waiver=None, interest_waiver=None, 
+                               principal_waiver=None, fixed_settlement=None):
+    """
+    Updates the customer's financial details in the database only if relevant values exist.
+    """
+    try:
+        update_fields_loan = []
+        update_values_loan = []
+        update_fields_plan = []
+        update_values_plan = []
 
+        #Updating the `loan_details` table
+        if new_payment_amount is not None:
+            update_fields_loan.append("due_amount = %s")
+            update_values_loan.append(new_payment_amount)
+
+        if new_loan_amount is not None:
+            update_fields_loan.append("remaining_balance = %s")
+            update_values_loan.append(new_loan_amount)
+
+        if loan_adjustment is not None:
+            update_fields_loan.append("loan_amount = loan_amount + %s")
+            update_values_loan.append(loan_adjustment)
+
+        if extension_cycles is not None:
+            update_fields_loan.append("loan_term = loan_term + %s")
+            update_values_loan.append(extension_cycles)
+
+        # Updating the `repurposed_plans` table
+        if fee_waiver is not None:
+            update_fields_plan.append("fee_waiver = %s")
+            update_values_plan.append(fee_waiver)
+
+        if interest_waiver is not None:
+            update_fields_plan.append("interest_waiver = %s")
+            update_values_plan.append(interest_waiver)
+
+        if principal_waiver is not None:
+            update_fields_plan.append("principal_waiver = %s")
+            update_values_plan.append(principal_waiver)
+
+        if fixed_settlement is not None:
+            update_fields_plan.append("fixed_settlement = %s")
+            update_values_plan.append(fixed_settlement)
+
+        #Update `loan_details` only if there are changes
+        if update_fields_loan:
+            update_values_loan.append(client_id)
+            query_loan = f"""
+            UPDATE loan_details
+            SET {', '.join(update_fields_loan)}
+            WHERE customer_id = %s;
+            """
+            cursor.execute(query_loan, tuple(update_values_loan))
+        
+        # Update `repurposed_plans` only if there are changes
+        if update_fields_plan:
+            update_values_plan.append(client_id)
+            query_plan = f"""
+            UPDATE repurposed_plans
+            SET {', '.join(update_fields_plan)}
+            WHERE client_id = %s;
+            """
+            cursor.execute(query_plan, tuple(update_values_plan))
+
+        conn.commit()
+        print(f"SUCCESS: Updated financial details for client {client_id}")
+        return {"message": "Customer financial details updated successfully"}
+
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ ERROR updating database: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database update failed: {str(e)}")
 
 #Run FastAPI App
 if __name__ == "__main__":
