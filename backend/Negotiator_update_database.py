@@ -807,7 +807,7 @@ def update_customer_financials(client_id, new_payment_amount=None, new_loan_amou
 
     except Exception as e:
         conn.rollback()
-        print(f"❌ ERROR updating database: {str(e)}")
+        print(f"ERROR updating database: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Database update failed: {str(e)}")
 
 #Run FastAPI App
