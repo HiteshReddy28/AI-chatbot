@@ -1,4 +1,3 @@
-from decimal import Decimal
 import os
 import requests
 import jwt
@@ -251,14 +250,14 @@ async def read_root():
     return {"message": "Hello from FastAPI"}
 
 
+from together import Together 
+# Together.ai API Configuration
+TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
+TOGETHER_API_URL = "https://api.together.xyz/v1/completions"
+client = Together()
 
 
-
-# Fixing 422 Unprocessable Content for /api/chat
-class LoanNegotiationRequest(BaseModel):
-    client_id: str
-    requested_changes: str
-
+# Fetch Complete Client Profile
 @app.get("/api/client/{client_id}")
 def get_client_details(client_id: str):
     try:
@@ -267,39 +266,20 @@ def get_client_details(client_id: str):
             SELECT u.first_name, u.last_name, u.email, u.ssn, u.loan_amount, 
                    c.credit_score, c.customer_since, c.last_payment_date, c.next_payment_due
             FROM users u
-            LEFT JOIN customer_details c 
-            ON u.client_id = c.customer_id  
+            JOIN customer_details c ON u.client_id = c.customer_id
             WHERE u.client_id = %s;
-        """, (int(client_id),))
+        """, (client_id,))
         
         user = cursor.fetchone()
-        print("DEBUG: User fetched ->", user)
-
         if not user:
-            raise HTTPException(status_code=404, detail="Customer not found")
-
-        # Ensure the correct number of columns before unpacking
-        if len(user) < 9:
-            raise HTTPException(status_code=500, detail="Unexpected database result format")
-
-        (
-            first_name, last_name, email, ssn, loan_amount,
-            credit_score, customer_since, last_payment_date, next_payment_due
-        ) = user
-
-        # Handle None values gracefully
-        loan_amount = loan_amount if loan_amount is not None else 0
-        credit_score = credit_score if credit_score is not None else "N/A"
-        customer_since = customer_since if customer_since is not None else "N/A"
-        last_payment_date = last_payment_date if last_payment_date is not None else "N/A"
-        next_payment_due = next_payment_due if next_payment_due is not None else "N/A"
+            raise HTTPException(status_code=404, detail="Client not found")
 
         # Fetch Loan Details
         cursor.execute("""
             SELECT loan_id, loan_type, loan_amount, loan_term, interest_rate, start_date, 
                    end_date, due_amount, remaining_balance, payment_status, late_payments
             FROM loan_details WHERE customer_id = %s;
-        """, (int(client_id),))
+        """, (client_id,))
         
         loan = cursor.fetchone()
         loan_details = {
@@ -313,7 +293,7 @@ def get_client_details(client_id: str):
         cursor.execute("""
             SELECT account_id, account_type, account_balance, account_status, opened_date
             FROM account_details WHERE customer_id = %s;
-        """, (int(client_id),))
+        """, (client_id,))
         
         account = cursor.fetchone()
         account_details = {
@@ -326,7 +306,7 @@ def get_client_details(client_id: str):
         cursor.execute("""
             SELECT plan_number, loan_adjustment, extension_cycles, fee_waiver, interest_waiver, principal_waiver, fixed_settlement, plan_name, description, priority
             FROM repurposed_plans WHERE client_id = %s ORDER BY priority ASC;
-        """, (int(client_id),))
+        """, (client_id,))
         
         plans = cursor.fetchall()
         repurposed_plans = [{
@@ -336,123 +316,86 @@ def get_client_details(client_id: str):
         } for p in plans]
 
         return {
-            "client_id": int(client_id),
-            "first_name": first_name,
-            "last_name": last_name,
-            "email": email,
-            "ssn": ssn,
-            "loan_amount": loan_amount,
-            "credit_score": credit_score,
-            "customer_since": customer_since,
-            "last_payment_date": last_payment_date,
-            "next_payment_due": next_payment_due,
+            "client_id": client_id,
+            "first_name": user[0],
+            "last_name": user[1],
+            "email": user[2],
+            "ssn": user[3],
+            "loan_amount": user[4],
+            "credit_score": user[5],
+            "customer_since": user[6],
+            "last_payment_date": user[7],
+            "next_payment_due": user[8],
+            "loan_amount": user[9],
             "loan_details": loan_details,
             "account_details": account_details,
             "repurposed_plans": repurposed_plans
         }
-    
     except Exception as e:
-        print(f"ERROR: {str(e)}")  # Log error
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/repurposed_plans/{client_id}")
-def get_plans(customer_id: str, priority: int):
-    """
-    Retrieves the financial plan for a customer based on priority.
-    """
+
+# Fetch Repurposed Plans
+@app.get("/api/repurposed-plans/{client_id}")
+def get_repurposed_plans(client_id: str):
     cursor.execute("""
-        SELECT plan_number, plan_name, loan_adjustment, extension_cycles, fee_waiver, interest_waiver, principal_waiver, fixed_settlement, description
-        FROM repurposed_plans WHERE client_id = %s AND priority = %s;
-    """, (customer_id, priority))
+        SELECT plan_number, loan_adjustment, extension_cycles, fee_waiver, interest_waiver, principal_waiver, fixed_settlement, plan_name, description, priority
+        FROM repurposed_plans WHERE client_id = %s ORDER BY priority ASC;
+    """, (client_id,))
+    
+    plans = cursor.fetchall()
+    if not plans:
+        raise HTTPException(status_code=404, detail="No repurposed plans found for this client.")
 
-    plan = cursor.fetchone()
-    if not plan:
-        raise HTTPException(status_code=404, detail="No plan found for this customer with the given priority.")
+    return [
+        {
+            "plan_number": p[0], "loan_adjustment": p[1], "extension_cycles": p[2], 
+            "fee_waiver": p[3], "interest_waiver": p[4], "principal_waiver": p[5], 
+            "fixed_settlement": p[6], "plan_name": p[7], "description": p[8], "priority": p[9]
+        } for p in plans
+    ]
+
+
+# Fetch Loan Details
+@app.get("/api/loan-details/{client_id}")
+def get_loan_details(client_id: str):
+    cursor.execute("""
+        SELECT loan_id, loan_type, loan_amount, loan_term, interest_rate, start_date, 
+               end_date, due_amount, remaining_balance, payment_status, late_payments
+        FROM loan_details WHERE customer_id = %s;
+    """, (client_id,))
+    
+    loan = cursor.fetchone()
+    if not loan:
+        raise HTTPException(status_code=404, detail="No loan details found for this client.")
 
     return {
-        "plan_number": plan[0],
-        "plan_name": plan[1],
-        "loan_adjustment": plan[2],
-        "extension_cycles": plan[3],
-        "fee_waiver": plan[4],
-        "interest_waiver": plan[5],
-        "principal_waiver": plan[6],
-        "fixed_settlement": plan[7],
-        "description": plan[8],
+        "loan_id": loan[0], "loan_type": loan[1], "loan_amount": loan[2], 
+        "loan_term": loan[3], "interest_rate": loan[4], "start_date": loan[5], 
+        "end_date": loan[6], "due_amount": loan[7], "remaining_balance": loan[8], 
+        "payment_status": loan[9], "late_payments": loan[10]
     }
 
-from together import Together 
-# Together.ai API Configuration
-TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
-TOGETHER_API_URL = "https://api.together.xyz/v1/completions"
-client = Together()
 
-#Helper function to safely convert Decimal to float
-def safe_float(value):
-    return float(value) if isinstance(value, Decimal) else value
 
-#Request Model
+# Fixing 422 Unprocessable Content for /api/chat
 class LoanNegotiationRequest(BaseModel):
     client_id: str
     requested_changes: str
 
-#Call Llama3 Model
-import requests
-
-def call_llama3(messages):
-    """
-    Calls the AI API with structured messages and retrieves a response.
-    """
-    api_url = os.getenv("TOGETHER_API_URL")
-    api_key = os.getenv("TOGETHER_API_KEY")
-
-    if not api_url or not api_key:
-        raise HTTPException(status_code=500, detail="AI API URL or API Key is missing.")
-
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
-        "messages": messages,
-        "max_tokens": 400,
-        "temperature": 0.2
-    }
-
-    
-    print("DEBUG: Sending AI Request ->", payload)
-
-    try:
-        response = requests.post(api_url, json=payload, headers=headers)
-
-        
-        print(f"DEBUG: AI API Status Code -> {response.status_code}")
-
-        
-        print("DEBUG: AI Full Response ->", response.text)
-
-        if response.status_code == 200:
-            return response.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-        else:
-            raise HTTPException(status_code=500, detail=f"AI API error: {response.status_code}, {response.text}")
-
-    except Exception as e:
-        print(f"ERROR: AI API call failed -> {str(e)}")
-        raise HTTPException(status_code=500, detail=f"AI API call failed: {str(e)}")
-    
+import re
 
 tools = [{
         "type": "function",
         "function": {
-            "name": "get_client_details",  
-            "description": "Retrieve customer details by client ID",
+            "name": "get_customer_details",
+            "description": "Get customer details by email",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "client_id": {"type": "string", "description": "Customer ID to retrieve details"}
+                    "email": {"type": "string", "description": "Customer email"}
                 },
-                "required": ["client_id"]
+                "required": ["email"]
             }
         }
     },
@@ -460,20 +403,18 @@ tools = [{
         "type": "function",
         "function": {
             "name": "get_plans",
-            "description": "Retrieve financial plans of a customer",
+            "description": "get the financial plans of a customer using this function",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "customer_id": {"type": "string", "description": "Customer ID for fetching plans"},
-                    "priority": {"type": "integer", "description": "Priority level of the plan"}
+                    "customer_id": {"type": "string", "description": "Customer_id is used to get plans related to that customer"},
+                    "priority": {"type": "numeric", "description": "Integer which send the plan with that priority"},
                 },
-                "required": ["customer_id", "priority"]
+                "required": ["customer_id","priority"]
             }
         }
     }
-]
-
-
+    ]
 
 prompt = """
 **Role**: You are a Customer Service Representative for Cognute Bank, responsible for negotiating with customers to convince them to accept a single plan that fits their current financial situation.
@@ -482,9 +423,9 @@ prompt = """
 
 ### Rules:
 1. **Greet the customer** and ask how you can assist them. Do not discuss plans at this stage.
-2. **Request the customer’s client ID** and **wait for their response**.
-3. **Call the function `get_client_details(client_id)`** to retrieve customer information once you receive the client id.
-4. After getting customer info, **update the customer’s due amount** (e.g., $X currently due) and **ask about what is their concern today?** and after that **ask their current situation ** to better assist them.
+2. **Request the customer’s email ID** and **wait for their response**.
+3. **Call the function `get_customer_info(email)`** to retrieve customer information once you receive the email.
+4. After getting customer info, **update the customer’s due amount** (e.g., $X currently due) and **ask about their current situation** to better assist them.
 5. Once the customer explains their situation, **call the function `get_plans(str(customer_id),int(priority))`** to get a list of plans the company offers.
 6.Make sure you are not fabricaiting any information, use only the data coming from function calls.
 7. **Never reveal that you have multiple plans**. Present **only one plan** as the best and most suitable option for the customer’s current financial status.
@@ -515,7 +456,7 @@ prompt = """
 
 ### Example Scenario:
 1. **Greet and Request Email**: “Hello! How can I assist you today? May I please have your email so I can look into your details?”
-2. **Retrieve Customer Info**: Call `get_client_details(client_id)`.
+2. **Retrieve Customer Info**: Call `get_customer_info(email)`.
 3. **Provide Due Amount**: “Thank you for your email. It looks like you currently have a due amount of $X. How is your financial situation? We’re here to help.”
 4. **Get Plan**: Call `get_plans(customer_id,priority)`.
 5. **Present Plan**: “Based on your situation, we recommend the [Plan Name] plan. This plan will reduce your monthly payments from $600 to $400 and lower your interest rate from 8% to 5%. You will save $200 each month, which can ease your financial burden.”
@@ -535,101 +476,71 @@ Respond only in XML format:
 </response>
 """
 
-message = {
-    "role": "system",
-    "content": prompt
-}
+message = {"role":"system",
+           "content":prompt}
 messages = [message]
-
-#AI_Negotiator
-def negotiate_with_ai(client_id, user_input):
-    messages.append({"role": "user", "content": user_input})
-
-    response = client.chat.completions.create(
-        model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
-        messages=messages,
-        max_tokens=300,
-        tools=tools,
-        tool_choice="auto",
-        temperature=0.2,
-    )
-
-    while response.choices[0].message.content is None:
-        functionname = response.choices[0].message.tool_calls[0].function.name
-        arguments = json.loads(response.choices[0].message.tool_calls[0].function.arguments)
-
-        print("Function called:", functionname)
-        print("Arguments:", arguments)
-
-        function_response = ""
-
-        if functionname == "get_client_details":
-            function_response = get_client_details(client_id) 
-            function_response = f"<customer_details>{function_response}</customer_details>"
-
-        elif functionname == "get_plans":
-            function_response = get_plans(client_id, arguments["priority"])
-            function_response = f"<plans>{function_response}</plans>"
-
-        else:
-            raise HTTPException(status_code=500, detail=f"Unknown function call: {functionname}")
-
-        messages.append({
-            "role": "tool",
-            "name": functionname,
-            "content": function_response
-        })
-
+try:
+    while True:
+        user_input = input("You: ").strip().lower()
+        messages.append({"role":"user","content":user_input})
+        if user_input == "exit":
+            print("Exiting chat. Goodbye!")
+            break
         response = client.chat.completions.create(
             model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
-            messages=messages,
+            messages= messages,
             max_tokens=300,
             tools=tools,
             tool_choice="auto",
             temperature=0.2,
         )
-
-    ai_response = response.choices[0].message.content
-    messages.append({"role": "assistant", "content": ai_response})
-
-    return ai_response
-
-#Negotiator
-@app.post("/api/negotiate")
-def negotiate_loan(request: LoanNegotiationRequest):
-    try:
-        print("Received request:", request.dict())  # Debugging
-
-        client_id = str(request.client_id).strip()
-        if not client_id:
-            raise HTTPException(status_code=400, detail="Client ID is required.")
-
-        if not request.requested_changes or len(request.requested_changes.strip()) == 0:
-            raise HTTPException(status_code=400, detail="Requested changes cannot be empty.")
-
         
-        ai_response = negotiate_with_ai(client_id, request.requested_changes)
+    #  print(response.choices[0].message.tool_calls[0].function.name)
+        while (response.choices[0].message.content == None):
+            functionname =  response.choices[0].message.tool_calls[0].function.name
+            arguments = response.choices[0].message.tool_calls[0].function.arguments
+            arguments = json.loads(arguments)
+            print("function name: ", functionname)
+            print("Arguments: ", arguments)
+            if functionname == "get_customer_details":
+                response = get_customer_details()
+                
+                response = """<customer_details>"""+response+"""</customer_details>"""
 
-        # Parse XML Response
-        root = ET.fromstring(ai_response)
-        customer_content = root.find('customer').text.strip()
+            else:
+                response = get_repurposed_plans(arguments["customer_id"],arguments["priority"]) 
+                response = """<plans>"""+response+"""</plans>"""
 
-        # Store chat history
-        cursor.execute(
-            "INSERT INTO chat_history (client_id, sender, message) VALUES (%s, %s, %s)",
-            (client_id, "bot", customer_content)
+            messages.append({
+            "role":"tool",
+            "name": functionname,
+            "content":response})
+
+            response = client.chat.completions.create(
+            model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
+            messages= messages,
+            max_tokens=300,
+            tools=tools,
+            tool_choice="auto",
+            temperature=0.2,
         )
-        conn.commit()
+        response = response.choices[0].message.content
+        messages.append({
+            "role":"assistant",
+            "content":response})
+    #  print("Assistant:", response)
+        root = ET.fromstring(response)
+        customer_content = root.find('customer').text.strip()
+        threshold = root.find('threshold').text.strip()
+        sentiment = root.find('sentiment').text.strip()
+        print("Sentiment:",sentiment)
+        print("Threshold:",threshold)
+        print("Assistant:", customer_content)
+except Exception as e:
+    print("Error",e)
+    
 
-        return {"negotiation_response": customer_content}
 
-    except Exception as e:
-        print(f"Error in /api/negotiate: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
-
-
-
-#Run FastAPI App
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

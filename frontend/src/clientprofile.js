@@ -5,13 +5,14 @@ import "./ClientProfile.css";
 const ClientProfile = () => {
     const navigate = useNavigate();
     const [clientData, setClientData] = useState(null);
+    const [plans, setPlans] = useState([]);
     const [error, setError] = useState("");
 
     useEffect(() => {
         const token = localStorage.getItem("token");
         let client_id = localStorage.getItem("client_id");
 
-        console.log("LocalStorage Token:", token);  //debug
+        console.log("LocalStorage Token:", token);  // Debugging
         console.log("LocalStorage Client ID:", client_id);
 
         if (!token) {
@@ -20,7 +21,6 @@ const ClientProfile = () => {
             return;
         }
 
-        // ✅ Fetch client_id from backend if missing
         if (!client_id) {
             fetch(`http://localhost:8000/api/userinfo`, {
                 method: "GET",
@@ -28,11 +28,11 @@ const ClientProfile = () => {
             })
             .then(response => response.json())
             .then(data => {
-                console.log("Fetched client_id from API:", data.client_id);
                 if (data.client_id) {
                     localStorage.setItem("client_id", data.client_id);
-                    client_id = data.client_id;  //Update client_id
-                    fetchClientData(data.client_id, token);
+                    client_id = data.client_id;
+                    fetchClientData(client_id, token);
+                    fetchPlans(client_id, token);
                 } else {
                     alert("Failed to retrieve client information.");
                     navigate("/login");
@@ -41,6 +41,7 @@ const ClientProfile = () => {
             .catch(error => console.error("Error fetching client_id:", error));
         } else {
             fetchClientData(client_id, token);
+            fetchPlans(client_id, token);
         }
 
     }, [navigate]);
@@ -54,7 +55,7 @@ const ClientProfile = () => {
             });
 
             const data = await response.json();
-            console.log("API Response:", data);
+            console.log("API Response (Client Data):", data);
 
             if (!response.ok) {
                 throw new Error(data.detail || "Failed to fetch client data.");
@@ -64,6 +65,28 @@ const ClientProfile = () => {
         } catch (error) {
             console.error("Fetch error:", error);
             setError("Error fetching client profile.");
+        }
+    };
+
+    const fetchPlans = async (client_id, token) => {
+        try {
+            console.log("Fetching repurposed plans...");
+            const response = await fetch(`http://localhost:8000/api/repurposed_plans/${client_id}`, {
+                method: "GET",
+                headers: { "Authorization": `Bearer ${token}` },
+            });
+
+            const data = await response.json();
+            console.log("API Response (Repurposed Plans):", data);
+
+            if (!response.ok) {
+                throw new Error(data.detail || "Failed to fetch repurposed plans.");
+            }
+
+            setPlans(data);
+        } catch (error) {
+            console.error("Fetch error:", error);
+            setError("Error fetching repurposed plans.");
         }
     };
 
@@ -79,21 +102,28 @@ const ClientProfile = () => {
                     <p><strong>Email:</strong> {clientData.email}</p>
                     <p><strong>SSN:</strong> {clientData.ssn}</p>
                     <p><strong>Loan Amount:</strong> ${clientData.loan_amount}</p>
+                    <p><strong>Delinquencies:</strong> {clientData.delinquencies}</p>
+                    <p><strong>Missed Payments:</strong> {clientData.missed_payments}</p>
 
                     <h3>Repurposed Plans:</h3>
-                    <ul>
-                        {clientData.repurposed_plans.map((plan, index) => (
-                            <li key={index} className="plan-box">
-                                <strong>Plan {plan.plan_number}</strong>
-                                <p>Loan Adjustment: ${plan.loan_adjustment}</p>
-                                <p>Extension Cycles: {plan.extension_cycles}</p>
-                                <p>Fee Waiver: {plan.fee_waiver}%</p>
-                                <p>Interest Waiver: {plan.interest_waiver}%</p>
-                                <p>Principal Waiver: {plan.principal_waiver}%</p>
-                                <p>Fixed Settlement Amount: ${plan.fixed_settlement}</p>
-                            </li>
-                        ))}
-                    </ul>
+                    {plans.length > 0 ? (
+                        <ul>
+                            {plans.map((plan, index) => (
+                                <li key={index} className="plan-box">
+                                    <strong>Plan {plan.plan_number}: {plan.plan_name}</strong>
+                                    <p>Loan Adjustment: ${plan.loan_adjustment}</p>
+                                    <p>Extension Cycles: {plan.extension_cycles}</p>
+                                    <p>Fee Waiver: {plan.fee_waiver}%</p>
+                                    <p>Interest Waiver: {plan.interest_waiver}%</p>
+                                    <p>Principal Waiver: {plan.principal_waiver}%</p>
+                                    <p>Fixed Settlement Amount: ${plan.fixed_settlement}</p>
+                                    <p><strong>Description:</strong> {plan.description}</p>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p>No repurposed plans available for this client.</p>
+                    )}
                 </div>
             ) : (
                 <p>Loading client data...</p>
