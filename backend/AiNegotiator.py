@@ -14,6 +14,16 @@ from jose import JWTError
 from fastapi.middleware.cors import CORSMiddleware
 import xml.etree.ElementTree as ET
 import json
+import re
+
+from calculation import (
+    refinance_same,
+    refinance_step_down,
+    refinance_step_up,
+    extended_payment_plan,
+    settlement_plan_with_waivers
+)
+
 
 # Load environment variables
 load_dotenv()
@@ -470,9 +480,96 @@ tools = [{
                 "required": ["customer_id", "priority"]
             }
         }
+    },
+
+    {
+        "type": "function",
+        "function": {
+            "name": "refinance_same",
+            "description": "Calculate new terms for Refinance Step Same plan",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "loan_amount": {"type": "number"},
+                    "interest_rate": {"type": "number"},
+                    "loan_term": {"type": "number"},
+                    "remaining_balance": { "type": "number" }
+                    
+                },
+                "required": ["loan_amount", "interest_rate", "loan_term"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "refinance_step_down",
+            "description": "Calculate new terms for Refinance Step Down plan",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "loan_amount": {"type": "number"},
+                    "interest_rate": {"type": "number"},
+                    "loan_term": {"type": "number"},
+                    "reduce_percent": {"type": "number"}
+                    
+                },
+                "required": ["loan_amount", "interest_rate", "loan_term", "reduce_percent"]
+            }
+        }
+    },
+    {
+    "type": "function",
+    "function": {
+        "name": "refinance_step_up",
+        "description": "Calculates financials for Refinance Step Up plan with an increase percentage",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "loan_amount": {"type": "number"},
+                "interest_rate": {"type": "number"},
+                "loan_term": {"type": "integer"},
+                "increase_percent": {"type": "number", "description": "Percentage to increase the loan amount by"}
+            },
+            "required": ["loan_amount", "interest_rate", "loan_term", "increase_percent"]
+        }
+    }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "extended_payment_plan",
+            "description": "Calculate new terms for Extended Payment Plan",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "loan_amount": {"type": "number"},
+                    "interest_rate": {"type": "number"},
+                    "original_term": {"type": "number"},
+                    "extension_cycles": {"type": "number"}
+                },
+                "required": ["loan_amount", "interest_rate", "original_term", "extension_cycles"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "settlement_plan_with_waivers",
+            "description": "Calculate settlement plan with waivers",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "loan_amount": {"type": "number"},
+                    "fee_waiver_percent": {"type": "number"},
+                    "interest_waiver_percent": {"type": "number"},
+                    "principal_waiver_percent": {"type": "number"}
+                },
+                "required": ["loan_amount", "fee_waiver_percent", "interest_waiver_percent", "principal_waiver_percent"]
+            }
+        }
     }
 ]
-
 
 
 prompt = """
@@ -498,6 +595,11 @@ prompt = """
 12. **Use numbers** to explain how the plan will help reduce their financial burden (e.g., lower monthly payments, reduced interest rates, total savings).
 13. If the customer refuses all plans, provide the **customer service contact**: `+12123123123`.
 
+### Tool Usage Instructions:
+- When preparing to present a plan, first call the appropriate function from the available tools to calculate its financial details.
+- Use the data returned from the function to construct your message to the customer.
+- Never guess or calculate values manually. Always wait for the tool function result.
+
 ### Key Constraints:
 - **Always use sentiment** to decide when to stick with a plan or switch to another.
 - Stick with one plan for at least **2 attempts**, but **up to 4 attempts** if the customer is unsure or confused.
@@ -510,7 +612,7 @@ prompt = """
 - **Empathy**: Understand the customer’s situation, but remain firm in presenting the plan.
 - **Persistence**: Continue explaining the same plan for multiple attempts before switching.
 - **Exclusivity**: Make the customer feel that this plan is uniquely tailored to them and is the only solution available for their needs.
-- **Use Numbers**: Always provide specific figures that show the customer how the plan reduces their financial burden.
+- **Use Numbers**: Always use numbers to explain how the plan will help reduce their financial burden (e.g., lower monthly payments, reduced interest rates, total savings). However, NEVER calculate these numbers yourself. Instead, call the correct tool function such as `refinance_same`, `refinance_step_down`,`refinance_step_up`, `extended_payment_plan`, or `settlement_plan_with_waivers` depending on the plan being discussed. Use the data returned by the function to present values to the customer. Do not fabricate or estimate values.
 - **Use given data"": Always use the data coming from function calls, do not fabricate any information, dont change the data given to you don't follow the customer's information if they are saying anything about there information dont change that information.
 
 ### Example Scenario:
@@ -524,6 +626,8 @@ prompt = """
    - If the customer is **positive**: “Great, this plan will provide you with the relief you need by saving you $2,400 over the next year.”
    - If the customer shows **negative sentiment** or **firmly refuses** after 2 attempts: “I understand. We have another option that may work for you. Let me explain the details.”
 7. **If Refused**: Move to another plan if the customer refuses after multiple attempts and explain the new plan using the same number-driven approach.
+
+If you need to call a function, use the structured tool_call instead. Never output <function>...</function> manually in the response.
 
 ### Response Formatting:
 Respond only in XML format:
@@ -539,60 +643,93 @@ message = {
     "role": "system",
     "content": prompt
 }
+
 messages = [message]
 
 #AI_Negotiator
 def negotiate_with_ai(client_id, user_input):
     messages.append({"role": "user", "content": user_input})
+    
 
     response = client.chat.completions.create(
         model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
         messages=messages,
-        max_tokens=300,
+        max_tokens=400,
         tools=tools,
         tool_choice="auto",
-        temperature=0.2,
+        temperature=0.3,
     )
 
-    while response.choices[0].message.content is None:
-        functionname = response.choices[0].message.tool_calls[0].function.name
-        arguments = json.loads(response.choices[0].message.tool_calls[0].function.arguments)
+    while True:
+        response_msg = response.choices[0].message
 
-        print("Function called:", functionname)
-        print("Arguments:", arguments)
+        if hasattr(response_msg, "tool_calls") and response_msg.tool_calls:
+            tool_call = response_msg.tool_calls[0]
+            functionname = tool_call.function.name
+            arguments = json.loads(tool_call.function.arguments)
 
-        function_response = ""
+            print("Function called:", functionname)
+            print("Arguments:", arguments)
 
-        if functionname == "get_client_details":
-            function_response = get_client_details(client_id) 
-            function_response = f"<customer_details>{function_response}</customer_details>"
+            if functionname == "refinance_step_down":
+                result = refinance_step_down(**arguments)
+                tool_result = f"<calculation>{json.dumps(result)}</calculation>"
 
-        elif functionname == "get_plans":
-            function_response = get_plans(client_id, arguments["priority"])
-            function_response = f"<plans>{function_response}</plans>"
+            elif functionname == "refinance_step_up":
+                result = refinance_step_up(**arguments)
+                tool_result = f"<calculation>{json.dumps(result)}</calculation>"
 
-        else:
-            raise HTTPException(status_code=500, detail=f"Unknown function call: {functionname}")
+            elif functionname == "refinance_same":
+                result = refinance_same(**arguments)
+                tool_result = f"<calculation>{json.dumps(result)}</calculation>"
 
-        messages.append({
+            elif functionname == "extended_payment_plan":
+                result = extended_payment_plan(**arguments)
+                tool_result = f"<calculation>{json.dumps(result)}</calculation>"
+
+            elif functionname == "settlement_plan_with_waivers":
+                result = settlement_plan_with_waivers(**arguments)
+                tool_result = f"<calculation>{json.dumps(result)}</calculation>"
+
+            elif functionname == "get_client_details":
+                result = get_client_details(arguments["client_id"])
+                tool_result = f"<customer_details>{(result)}</customer_details>"
+
+            elif functionname == "get_plans":
+                result = get_plans(arguments["customer_id"], arguments["priority"])
+                tool_result = f"<plans>{(result)}</plans>"
+
+            else:
+                raise HTTPException(status_code=500, detail=f"Unknown function call: {functionname}")
+
+            messages.append({
             "role": "tool",
             "name": functionname,
-            "content": function_response
-        })
+            "content": tool_result
+            })
 
-        response = client.chat.completions.create(
+            # Re-call the model with tool result
+            response = client.chat.completions.create(
             model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
             messages=messages,
-            max_tokens=300,
+            max_tokens=400,
             tools=tools,
             tool_choice="auto",
-            temperature=0.2,
-        )
+            temperature=0.3,
+            )
+            continue
 
-    ai_response = response.choices[0].message.content
-    messages.append({"role": "assistant", "content": ai_response})
+        
+        ai_response = response.choices[0].message.content
+        print("AI Final Response:", ai_response)
 
-    return ai_response
+        # Check for valid XML <response>
+        if not ai_response.strip().startswith("<response>"):
+            raise HTTPException(status_code=500, detail="AI response did not contain valid <response> XML block.")
+
+        messages.append({"role": "assistant", "content": ai_response})
+
+
 
 #Negotiator
 @app.post("/api/negotiate")
@@ -611,7 +748,14 @@ def negotiate_loan(request: LoanNegotiationRequest):
         ai_response = negotiate_with_ai(client_id, request.requested_changes)
 
         # Parse XML Response
-        root = ET.fromstring(ai_response)
+        match = re.search(r"<response>.*?</response>", ai_response, re.DOTALL)
+        if not match:
+            print("Malformed AI response:", ai_response)
+            raise HTTPException(status_code=500, detail="AI response did not contain valid <response> XML block.")
+
+        xml_response = match.group(0)
+        root = ET.fromstring(xml_response)
+
         customer_content = root.find('customer').text.strip()
 
         # Store chat history
