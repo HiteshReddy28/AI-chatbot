@@ -22,7 +22,7 @@ def refinance_same(loan_amount: float, interest_rate: float, loan_term: int, rem
         "interest_rate": interest_rate,
         "monthly_payment": monthly_payment,
         "refunded_amount": refunded_amount,
-        "description": "Same terms (interest rate, tenure etc...) and same loan amount. The difference between original loan amount and remaining balance is refunded to the customer."
+        "description": "Same terms (interest rate, tenure etc...) and same loan amount. The difference between original loan amount and remaining balance is refunded to help the customer ."
     }
 
 
@@ -53,16 +53,16 @@ def refinance_step_up(loan_amount: float, interest_rate: float, loan_term: int, 
     }
 
 
-def extended_payment_plan(loan_amount: float, interest_rate: float, original_term: int, extra_cycles: int) -> dict:
+def extended_payment_plan(loan_amount: float, interest_rate: float, original_term: int, extension_cycles: int) -> dict:
    
-    new_term = original_term + extra_cycles
+    new_term = original_term + extension_cycles
     return {
-        "type": f"Extended Payment Plan (+{extra_cycles} months)",
+        "type": f"Extended Payment Plan (+{extension_cycles} months)",
         "new_loan_amount": loan_amount,
         "loan_term": new_term,
         "interest_rate": interest_rate,
         "monthly_payment": calculate_monthly_payment(loan_amount, interest_rate, new_term),
-        "description": f"Extended by {extra_cycles} months"
+        "description": f"Extended by {extension_cycles} months"
     }
 
 

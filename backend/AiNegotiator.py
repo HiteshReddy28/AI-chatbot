@@ -518,23 +518,7 @@ tools = [{
             }
         }
     },
-    {
-    "type": "function",
-    "function": {
-        "name": "refinance_step_up",
-        "description": "Calculates financials for Refinance Step Up plan with an increase percentage",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "loan_amount": {"type": "number"},
-                "interest_rate": {"type": "number"},
-                "loan_term": {"type": "integer"},
-                "increase_percent": {"type": "number", "description": "Percentage to increase the loan amount by"}
-            },
-            "required": ["loan_amount", "interest_rate", "loan_term", "increase_percent"]
-        }
-    }
-    },
+    
     {
         "type": "function",
         "function": {
@@ -568,7 +552,24 @@ tools = [{
                 "required": ["loan_amount", "fee_waiver_percent", "interest_waiver_percent", "principal_waiver_percent"]
             }
         }
+    },
+    {
+    "type": "function",
+    "function": {
+        "name": "refinance_step_up",
+        "description": "Calculates financials for Refinance Step Up plan with an increase percentage",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "loan_amount": {"type": "number"},
+                "interest_rate": {"type": "number"},
+                "loan_term": {"type": "integer"},
+                "increase_percent": {"type": "number", "description": "Percentage to increase the loan amount by"}
+            },
+            "required": ["loan_amount", "interest_rate", "loan_term", "increase_percent"]
+        }
     }
+    },
 ]
 
 
@@ -627,7 +628,6 @@ prompt = """
    - If the customer shows **negative sentiment** or **firmly refuses** after 2 attempts: “I understand. We have another option that may work for you. Let me explain the details.”
 7. **If Refused**: Move to another plan if the customer refuses after multiple attempts and explain the new plan using the same number-driven approach.
 
-If you need to call a function, use the structured tool_call instead. Never output <function>...</function> manually in the response.
 
 ### Response Formatting:
 Respond only in XML format:
@@ -657,8 +657,9 @@ def negotiate_with_ai(client_id, user_input):
         max_tokens=400,
         tools=tools,
         tool_choice="auto",
-        temperature=0.3,
+        temperature=0.2,
     )
+
 
     while True:
         response_msg = response.choices[0].message
@@ -715,19 +716,25 @@ def negotiate_with_ai(client_id, user_input):
             max_tokens=400,
             tools=tools,
             tool_choice="auto",
-            temperature=0.3,
+            temperature=0.2,
             )
+            
             continue
 
         
-        ai_response = response.choices[0].message.content
+        # AI has responded with final message
+        ai_response = response_msg.content
+
+        if not ai_response or not isinstance(ai_response, str):
+            raise HTTPException(status_code=500, detail="AI response is empty or invalid.")
+
         print("AI Final Response:", ai_response)
 
-        # Check for valid XML <response>
         if not ai_response.strip().startswith("<response>"):
             raise HTTPException(status_code=500, detail="AI response did not contain valid <response> XML block.")
 
         messages.append({"role": "assistant", "content": ai_response})
+        return ai_response
 
 
 
@@ -747,16 +754,28 @@ def negotiate_loan(request: LoanNegotiationRequest):
         
         ai_response = negotiate_with_ai(client_id, request.requested_changes)
 
-        # Parse XML Response
+        if not ai_response or not isinstance(ai_response, str):
+            raise HTTPException(status_code=500, detail="AI response is empty or invalid.")
+
+        # Extract the <response> XML block safely
         match = re.search(r"<response>.*?</response>", ai_response, re.DOTALL)
         if not match:
             print("Malformed AI response:", ai_response)
             raise HTTPException(status_code=500, detail="AI response did not contain valid <response> XML block.")
 
         xml_response = match.group(0)
-        root = ET.fromstring(xml_response)
 
-        customer_content = root.find('customer').text.strip()
+        try:
+            root = ET.fromstring(xml_response)
+        except ET.ParseError as e:
+            print("XML parsing error:", str(e))
+            raise HTTPException(status_code=500, detail="Failed to parse AI XML response.")
+
+        customer_node = root.find("customer")
+        if customer_node is None or customer_node.text is None:
+            raise HTTPException(status_code=500, detail="Missing <customer> tag or text in AI response.")
+
+        customer_content = customer_node.text.strip()
 
         # Store chat history
         cursor.execute(
