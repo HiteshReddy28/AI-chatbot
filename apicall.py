@@ -46,7 +46,7 @@ def chat_with_model(prompt: str) -> str:
     } 
 
 
-    
+
        
     while True:
         try:
@@ -65,7 +65,7 @@ def chat_with_model(prompt: str) -> str:
 
 if __name__ == "__main__":
     # First verify token
-    TOKEN = "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"
+    
     if verify_token(TOKEN):
         print("Token is valid! Testing the model...")
         # Test the model with a question
@@ -76,4 +76,3 @@ if __name__ == "__main__":
         print("Error: Invalid token. Please make sure you:")
         print("1. Have accepted the model's terms at: https://huggingface.co/meta-llama/Llama-2-7b-chat-hf")
         print("2. Have waited for access approval")
-        print("3. Have created a token with proper permissions at: https://huggingface.co/settings/tokens")
