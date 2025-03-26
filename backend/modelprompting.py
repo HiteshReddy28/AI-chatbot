@@ -8,56 +8,119 @@ load_dotenv()
 key = os.getenv("TOGETHER_API_KEY")
 client = Together()
 
+# threshold  = math.rand
+
 def get_customer_details():
-    customer_details = [{
-    "customer_id": "CUST123456",
-    "first_name": "John",
-    "last_name": "Doe",
-    "email": "john.doe@example.com",
-    "phone": "+1234567890",
-    "date_of_birth": "1985-06-15",
-    "ssn": "123-45-6789",
-    "address": {
-        "street": "123 Main St",
-        "city": "Anytown",
-        "state": "CA",
-        "zip": "12345",
-        "country": "USA"
+    customer_details = [
+    {
+        "customer_id": "CUST123456",
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "john.doe@example.com",
+        "phone": "+1234567890",
+        "date_of_birth": "1985-06-15",
+        "ssn": "123-45-6789",
+        "address": {
+            "street": "123 Main St",
+            "city": "Anytown",
+            "state": "CA",
+            "zip": "12345",
+            "country": "USA"
+        },
+        "employment_details": {
+            "employer_name": "ABC Corp",
+            "job_title": "Software Engineer",
+            "annual_income": 85000,
+            "employment_status": "Full-Time",
+            "years_employed": 5
+        },
+        "loan_details": [
+            {
+                "loan_id": "LN987654",
+                "loan_type": "Personal Loan",
+                "loan_amount": 10000,
+                "loan_term": 60,
+                "interest_rate": 0.05,
+                "start_date": "2022-01-01",
+                "end_date": "2027-01-01",
+                "monthly_payment": 188.71,
+                "remaining_balance": 7500,
+                "dues": 188.71,
+                "payment_status": "Active",
+                "late_payments": 0,
+                "loan_purpose": "Medical Expenses",
+                "prepayment_penalty": True,
+                "collateral_required": False
+            }
+        ],
+        "account_details": {
+            "account_id": "ACC112233",
+            "account_type": "Savings",
+            "account_balance": 5000,
+            "account_status": "Active",
+            "opened_date": "2018-05-10"
+        },
+        "credit_score": 720,
+        "customer_since": "2015-03-22",
+        "last_payment_date": "2024-02-15",
+        "next_payment_due": "2024-03-15",
+        "payment_method": "Auto Debit"
     },
-    "employment_details": {
-        "employer_name": "ABC Corp",
-        "job_title": "Software Engineer",
-        "annual_income": 85000,
-        "employment_status": "Full-Time",
-        "years_employed": 5
-    },
-    "loan_details": {
-        "loan_id": "LN987654",
-        "loan_type": "Personal Loan",
-        "loan_amount": 10000,
-        "loan_term": 60,
-        "interest_rate": 0.05,
-        "start_date": "2022-01-01",
-        "end_date": "2027-01-01",
-        "monthly_payment": 188.71,
-        "remaining_balance": 7500,
-        "payment_status": "Active",
-        "late_payments": 0
-    },
-    "account_details": {
-        "account_id": "ACC112233",
-        "account_type": "Savings",
-        "account_balance": 5000,
-        "account_status": "Active",
-        "opened_date": "2018-05-10"
-    },
-    "credit_score": 720,
-    "customer_since": "2015-03-22",
-    "last_payment_date": "2024-02-15",
-    "next_payment_due": "2024-03-15",
-    "payment_method": "Auto Debit"
+    {
+  "customer_id": "CUST234567",
+  "first_name": "Jane",
+  "last_name": "Smith",
+  "email": "jane.smith@example.com",
+  "phone": "+1987654321",
+  "date_of_birth": "1990-07-20",
+  "ssn": "234-56-7890",
+  "address": {
+    "street": "456 Elm Street",
+    "city": "Metropolis",
+    "state": "NY",
+    "zip": "10001",
+    "country": "USA"
+  },
+  "employment_details": {
+    "employer_name": "XYZ Inc",
+    "job_title": "Financial Analyst",
+    "annual_income": 70000,
+    "employment_status": "Full-Time",
+    "years_employed": 3
+  },
+  "loan_details": [
+    {
+      "loan_id": "LN123456",
+      "loan_type": "Personal Loan",
+      "loan_amount": 15000,
+      "loan_term": 48,
+      "interest_rate": 0.07,
+      "start_date": "2021-06-01",
+      "end_date": "2025-06-01",
+      "monthly_payment": 358.24,
+      "remaining_balance": 9200,
+      "dues": 358.24,
+      "payment_status": "Active",
+      "late_payments": 2,
+      "loan_purpose": "Home Renovation",
+      "prepayment_penalty": False,
+      "collateral_required": False
+    }
+  ],
+  "account_details": {
+    "account_id": "ACC445566",
+    "account_type": "Checking",
+    "account_balance": 3200,
+    "account_status": "Active",
+    "opened_date": "2019-09-15"
+  },
+  "credit_score": 690,
+  "customer_since": "2017-08-30",
+  "last_payment_date": "2025-03-01",
+  "next_payment_due": "2025-04-01",
+  "payment_method": "Manual Payment"
 },
- {
+    {
         "customer_id": "CUST654321",
         "first_name": "Jane",
         "last_name": "Smith",
@@ -79,19 +142,42 @@ def get_customer_details():
             "employment_status": "Full-Time",
             "years_employed": 3
         },
-        "loan_details": {
-            "loan_id": "LN123789",
-            "loan_type": "Car Loan",
-            "loan_amount": 25000,
-            "loan_term": 48,
-            "interest_rate": 0.045,
-            "start_date": "2023-03-01",
-            "end_date": "2027-03-01",
-            "monthly_payment": 566.14,
-            "remaining_balance": 24000,
-            "payment_status": "Active",
-            "late_payments": 1
-        },
+        "loan_details": [
+            {
+                "loan_id": "LN123789",
+                "loan_type": "Car Loan",
+                "loan_amount": 25000,
+                "loan_term": 48,
+                "interest_rate": 0.045,
+                "start_date": "2023-03-01",
+                "end_date": "2027-03-01",
+                "monthly_payment": 566.14,
+                "remaining_balance": 24000,
+                "dues": 666.14,
+                "payment_status": "Active",
+                "late_payments": 1,
+                "loan_purpose": "Vehicle Purchase",
+                "prepayment_penalty": False,
+                "collateral_required": True
+            },
+            {
+                "loan_id": "LN876543",
+                "loan_type": "Credit Card Debt",
+                "loan_amount": 5000,
+                "loan_term": 24,
+                "interest_rate": 0.15,
+                "start_date": "2022-06-01",
+                "end_date": "2024-06-01",
+                "monthly_payment": 250,
+                "remaining_balance": 2000,
+                "dues": 300,
+                "payment_status": "Delinquent",
+                "late_payments": 3,
+                "loan_purpose": "Retail Purchases",
+                "prepayment_penalty": False,
+                "collateral_required": False
+            }
+        ],
         "account_details": {
             "account_id": "ACC445566",
             "account_type": "Checking",
@@ -107,237 +193,264 @@ def get_customer_details():
     },
     {
         "customer_id": "CUST112233",
-        "first_name": "Robert",
-        "last_name": "Johnson",
-        "email": "robert.johnson@example.com",
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice.brown@example.com",
         "phone": "+1122334455",
-        "date_of_birth": "1978-12-05",
-        "ssn": "456-78-9012",
+        "date_of_birth": "1992-03-12",
+        "ssn": "555-66-7788",
         "address": {
-            "street": "789 Oak St",
-            "city": "Metro City",
-            "state": "NY",
-            "zip": "54321",
+            "street": "789 Maple St",
+            "city": "Los Angeles",
+            "state": "CA",
+            "zip": "90001",
             "country": "USA"
         },
         "employment_details": {
-            "employer_name": "Tech Solutions",
-            "job_title": "Data Scientist",
-            "annual_income": 120000,
-            "employment_status": "Full-Time",
-            "years_employed": 8
+            "employer_name": "ACME Co",
+            "job_title": "Data Analyst",
+            "annual_income": 70000,
+            "employment_status": "Part-Time",
+            "years_employed": 2
         },
-        "loan_details": {
-            "loan_id": "LN456123",
-            "loan_type": "Mortgage",
-            "loan_amount": 300000,
-            "loan_term": 360,
-            "interest_rate": 0.04,
-            "start_date": "2015-06-01",
-            "end_date": "2045-06-01",
-            "monthly_payment": 1432.25,
-            "remaining_balance": 250000,
-            "payment_status": "Active",
-            "late_payments": 2
-        },
+        "loan_details": [
+            {
+                "loan_id": "LN332211",
+                "loan_type": "Student Loan",
+                "loan_amount": 15000,
+                "loan_term": 120,
+                "interest_rate": 0.035,
+                "start_date": "2020-09-01",
+                "end_date": "2030-09-01",
+                "monthly_payment": 147.89,
+                "remaining_balance": 12500,
+                "dues": 147.89,
+                "payment_status": "Active",
+                "late_payments": 0,
+                "loan_purpose": "Higher Education",
+                "prepayment_penalty": True,
+                "collateral_required": False
+            }
+        ],
         "account_details": {
-            "account_id": "ACC778899",
-            "account_type": "Joint",
-            "account_balance": 15000,
+            "account_id": "ACC998877",
+            "account_type": "Savings",
+            "account_balance": 1500,
             "account_status": "Active",
-            "opened_date": "2010-01-25"
+            "opened_date": "2019-02-01"
         },
-        "credit_score": 740,
-        "customer_since": "2009-12-01",
+        "credit_score": 680,
+        "customer_since": "2018-06-15",
         "last_payment_date": "2024-02-10",
         "next_payment_due": "2024-03-10",
         "payment_method": "Auto Debit"
     },
-    {
-        "customer_id": "CUST789101",
-        "first_name": "Emily",
-        "last_name": "Davis",
-        "email": "emily.davis@example.com",
-        "phone": "+1098765432",
-        "date_of_birth": "1995-02-18",
-        "ssn": "234-56-7890",
+     {
+        "customer_id": "CUST445566",
+        "first_name": "Robert",
+        "last_name": "Johnson",
+        "email": "robert.johnson@example.com",
+        "phone": "+1445566778",
+        "date_of_birth": "1980-11-02",
+        "ssn": "444-55-6666",
         "address": {
-            "street": "321 Pine St",
-            "city": "Lakeside",
-            "state": "FL",
-            "zip": "98765",
+            "street": "234 Oak Lane",
+            "city": "Chicago",
+            "state": "IL",
+            "zip": "60601",
             "country": "USA"
         },
         "employment_details": {
-            "employer_name": "HealthPlus",
-            "job_title": "Nurse Practitioner",
-            "annual_income": 75000,
-            "employment_status": "Part-Time",
+            "employer_name": "Global Solutions",
+            "job_title": "Project Manager",
+            "annual_income": 105000,
+            "employment_status": "Full-Time",
+            "years_employed": 7
+        },
+        "loan_details": [
+            {
+                "loan_id": "LN556677",
+                "loan_type": "Mortgage",
+                "loan_amount": 300000,
+                "loan_term": 360,
+                "interest_rate": 0.03,
+                "start_date": "2015-07-01",
+                "end_date": "2045-07-01",
+                "monthly_payment": 1264.14,
+                "remaining_balance": 250000,
+                "dues": 1264.14,
+                "payment_status": "Active",
+                "late_payments": 2,
+                "loan_purpose": "Home Purchase",
+                "prepayment_penalty": True,
+                "collateral_required": True
+            },
+            {
+                "loan_id": "LN667788",
+                "loan_type": "Personal Loan",
+                "loan_amount": 20000,
+                "loan_term": 60,
+                "interest_rate": 0.07,
+                "start_date": "2020-10-01",
+                "end_date": "2025-10-01",
+                "monthly_payment": 396.02,
+                "remaining_balance": 8000,
+                "dues": 396.02,
+                "payment_status": "Active",
+                "late_payments": 0,
+                "loan_purpose": "Debt Consolidation",
+                "prepayment_penalty": False,
+                "collateral_required": False
+            }
+        ],
+        "account_details": {
+            "account_id": "ACC223344",
+            "account_type": "Savings",
+            "account_balance": 15000,
+            "account_status": "Active",
+            "opened_date": "2010-04-15"
+        },
+        "credit_score": 750,
+        "customer_since": "2009-08-01",
+        "last_payment_date": "2024-03-01",
+        "next_payment_due": "2024-04-01",
+        "payment_method": "Auto Debit"
+    },
+    {
+        "customer_id": "CUST778899",
+        "first_name": "Emily",
+        "last_name": "Davis",
+        "email": "emily.davis@example.com",
+        "phone": "+1778899000",
+        "date_of_birth": "1995-02-14",
+        "ssn": "777-88-9999",
+        "address": {
+            "street": "567 Pine St",
+            "city": "Seattle",
+            "state": "WA",
+            "zip": "98101",
+            "country": "USA"
+        },
+        "employment_details": {
+            "employer_name": "Tech Innovators",
+            "job_title": "UX Designer",
+            "annual_income": 85000,
+            "employment_status": "Full-Time",
             "years_employed": 2
         },
-        "loan_details": {
-            "loan_id": "LN789012",
-            "loan_type": "Student Loan",
-            "loan_amount": 50000,
-            "loan_term": 120,
-            "interest_rate": 0.035,
-            "start_date": "2020-09-01",
-            "end_date": "2030-09-01",
-            "monthly_payment": 495.40,
-            "remaining_balance": 42000,
-            "payment_status": "Active",
-            "late_payments": 0
-        },
+        "loan_details": [
+            {
+                "loan_id": "LN778899",
+                "loan_type": "Student Loan",
+                "loan_amount": 50000,
+                "loan_term": 120,
+                "interest_rate": 0.04,
+                "start_date": "2018-09-01",
+                "end_date": "2028-09-01",
+                "monthly_payment": 506.23,
+                "remaining_balance": 30000,
+                "dues": 506.23,
+                "payment_status": "Active",
+                "late_payments": 1,
+                "loan_purpose": "Higher Education",
+                "prepayment_penalty": False,
+                "collateral_required": False
+            },
+            {
+                "loan_id": "LN889900",
+                "loan_type": "Credit Card Debt",
+                "loan_amount": 8000,
+                "loan_term": 24,
+                "interest_rate": 0.18,
+                "start_date": "2022-01-01",
+                "end_date": "2024-01-01",
+                "monthly_payment": 400,
+                "remaining_balance": 2000,
+                "dues": 600,
+                "payment_status": "Delinquent",
+                "late_payments": 3,
+                "loan_purpose": "Retail Purchases",
+                "prepayment_penalty": False,
+                "collateral_required": False
+            }
+        ],
         "account_details": {
-            "account_id": "ACC990011",
-            "account_type": "Savings",
-            "account_balance": 8000,
+            "account_id": "ACC334455",
+            "account_type": "Checking",
+            "account_balance": 2500,
             "account_status": "Active",
-            "opened_date": "2021-02-18"
+            "opened_date": "2017-06-20"
         },
         "credit_score": 690,
-        "customer_since": "2020-01-10",
+        "customer_since": "2016-11-12",
         "last_payment_date": "2024-02-25",
         "next_payment_due": "2024-03-25",
-        "payment_method": "Auto Debit"
+        "payment_method": "Manual Payment"
     }
 ]
     return json.dumps(customer_details[0])
 
-def get_plans(customer_id:str,priority:int):
-    repayment_plans = [
-        {
-            "Priority": 1,
-            "Plan": "Refinance Step Same",
-            "Description": "Same terms (interest rate, tenure, etc.) and same loan amount.",
-            "KeyFeatures": [
-                "Old loan is paid off, and a new loan with the same terms is issued.",
-                "Helps maintain consistency without any additional burden."
-            ],
-            "EligibilityCriteria": [
-                "Borrower must have a stable income source.",
-                "May require good repayment history before delinquency."
-            ],
-            "Pros": ["Simple process with no major changes."],
-            "Cons": ["Does not address affordability issues significantly."]
-        },
-        {
-            "Priority": 2,
-            "Plan": "Refinance Step Down",
-            "Description": "Same terms (interest rate, tenure, etc.) but reduces the loan amount by a percentage.",
-            "KeyFeatures": [
-                "Reduction in loan amount helps lower overall repayment burden.",
-                "Allows flexibility in restructuring existing debt."
-            ],
-            "EligibilityCriteria": [
-                "Stable income source.",
-                "Improved creditworthiness may be required."
-            ],
-            "Pros": ["Lower repayment amounts.", "Helps manage debt better."],
-            "Cons": ["Requires negotiation and lender approval."]
-        },
-        {
-            "Priority": 3,
-            "Plan": "Refinance Step Up",
-            "Description": "Same terms (interest rate, tenure, etc.) but increases the loan amount by a percentage.",
-            "KeyFeatures": [
-                "Increase in loan amount provides additional funds.",
-                "Can be used for urgent financial needs."
-            ],
-            "EligibilityCriteria": [
-                "Borrower must demonstrate the capacity to repay the increased amount."
-            ],
-            "Pros": ["Access to more funds."],
-            "Cons": ["Higher total repayment burden."]
-        },
-        {
-            "Priority": 4,
-            "Plan": "Extended Payment Plan up to 12 cycles",
-            "Description": "Extend by 3/6/9/12 cycles for loan tenures <= 12 cycles.",
-            "KeyFeatures": [
-                "Helps reduce monthly installment by extending tenure.",
-                "Allows borrowers to manage short-term financial hardships."
-            ],
-            "EligibilityCriteria": [
-                "Typically offered to borrowers with temporary financial difficulties.",
-                "Loan should not be in deep delinquency (usually <90 DPD)."
-            ],
-            "Pros": ["Immediate relief from high monthly payments."],
-            "Cons": ["Increased total interest due to a longer repayment period."]
-        },
-        {
-            "Priority": 5,
-            "Plan": "Extended Payment Plan up to 24 cycles at 6 cycle steps",
-            "Description": "Extend by 6/12/18/24 cycles for loan tenures > 12 cycles.",
-            "KeyFeatures": [
-                "Longer extension options for loans with higher tenures.",
-                "Allows significant reduction in monthly installments."
-            ],
-            "EligibilityCriteria": [
-                "Borrower must demonstrate a genuine need for extension."
-            ],
-            "Pros": ["More time to repay."],
-            "Cons": ["May incur additional interest costs."]
-        },
-        {
-            "Priority": 6,
-            "Plan": "Extended Payment Plan up to 24 cycles at 3 cycle steps",
-            "Description": "Extend by 3/6/9/12/15/18/21/24 cycles for loan tenures > 12 cycles.",
-            "KeyFeatures": [
-                "Offers flexibility in selecting extension duration.",
-                "Suitable for borrowers needing tailored solutions."
-            ],
-            "EligibilityCriteria": [
-                "May require proof of financial hardship."
-            ],
-            "Pros": ["Customizable repayment period."],
-            "Cons": ["Potential restructuring fees."]
-        },
-        {
-            "Priority": 7,
-            "Plan": "Settlement with Fee Waiver",
-            "Description": "Waive fees up to 100% in steps of 25%.",
-            "KeyFeatures": [
-                "Reduction in fees helps lessen the repayment burden.",
-                "Immediate relief for borrowers in delinquency."
-            ],
-            "EligibilityCriteria": [
-                "Typically offered to borrowers with severe delinquency (90+ DPD)."
-            ],
-            "Pros": ["Quick debt resolution."],
-            "Cons": ["May impact credit score negatively."]
-        },
-        {
-            "Priority": 8,
-            "Plan": "Settlement with Interest Waiver",
-            "Description": "Waive 100% fees and up to 100% of interest in steps of 25%.",
-            "KeyFeatures": [
-                "Waiving interest provides substantial relief.",
-                "Suitable for borrowers facing severe financial hardship."
-            ],
-            "EligibilityCriteria": [
-                "Requires negotiation and proof of hardship."
-            ],
-            "Pros": ["Helps clear debt faster."],
-            "Cons": ["Reduces future credit options."]
-        },
-        {
-            "Priority": 9,
-            "Plan": "Settlement with Principal Waiver",
-            "Description": "Waive 100% fees, 100% interest, and up to 10/20/30/40% of principal in steps.",
-            "KeyFeatures": [
-                "Principal waiver provides maximum reduction in repayment amount.",
-                "Final settlement ensures loan closure."
-            ],
-            "EligibilityCriteria": [
-                "Requires lender approval and extensive negotiation."
-            ],
-            "Pros": ["Significant debt relief."],
-            "Cons": ["Severe impact on credit score."]
-        }
-    ]
+def get_plans(customer_id:str):
 
-    return json.dumps(repayment_plans[priority-1])
+    repayment_plans = { 
+        "CUST123456": {
+    "1": {
+      "plan_name": "Refinance Step Same",
+
+      "new_loan_amount": 10000,
+      "new_interest_rate": 0.05,
+      "new_loan_term_months": 60,
+      "new_monthly_payment": 188.71,
+      "cash in hand": 2311.29,
+      "benefit": "Cash in hand for current financial situation.",
+      "eligibility": "Requires stable income and improved credit score (680+).",
+      "negotiation_rules":"No parameters to negotiate try explaining its benefits ",
+    },
+    "2": {
+      "plan_name": "Refinance Step Down",
+      
+      "new_loan_amount": 9000,
+      "new_interest_rate": 0.05,
+      "new_loan_term_months": 60,
+      "new_monthly_payment": 169.84,
+      "cash in hand": 1311.29,
+      "benefit": "Cash in hand for current financial situation. montly payment is lower ",
+      'calculations': "calculate montly payment and cash_in_hand for change in loan amount",
+      "eligibility": "Requires stable income and improved credit score (680+).",
+      "negotiation_rules":"Use loan amount as parameter, for each loan amount you must iterate atleast 3 times before going to reducing loan amount by 10% until you reach 8000 (min loan amount)",
+    },
+    "3": {
+      "plan_name": "Refinance Step Up",
+      
+      "new_loan_amount": 11000,
+      "new_interest_rate": 0.05,
+      "new_loan_term_months": 60,
+      "new_monthly_payment": 207.58,
+      "cash in hand": 3311,
+      "benefit": "Cash in hand for current financial situation.",
+      "disadvantage": "Higher monthly payment.",
+      'calculations': "calculate montly payment and cash_in_hand for change in loan amount",
+      "eligibility": "Requires stable income and improved credit score (680+).",
+      "negotiation_rules":"Use loan amount as parameter, for each loan amount you must iterate atleast 3 times before going to change loan amount by 10% until you reach 15000(max loan amount) ",
+    },
+    "4": {
+      "plan_name": "Extended Payment Plan (4 Cycles)",
+      "loan_amount": 10000,
+      "new_interest_rate": 0.05,
+      "new_loan_term_months": 63,
+      "new_monthly_payment": 154.21,
+      "benefit": "Lower monthly payments to reduce immediate financial stress.",
+      "downside": "Total interest paid will increase due to extended tenure.",
+      "eligibility": "Suitable for borrowers with temporary financial hardships.",
+      'calculations': "calculate montly payment  for change in tenure",
+      "negotiation_rules":"Use cycles to negotiate, add +3 months for each cycle, until you reach 72 months.",
+    },
+}
+    }
+    return json.dumps(repayment_plans[customer_id])
+
+
+
 
 tools = [{
         "type": "function",
@@ -361,68 +474,80 @@ tools = [{
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "customer_id": {"type": "string", "description": "Customer_id is used to get plans related to that customer"},
-                    "priority": {"type": "numeric", "description": "Integer which send the plan with that priority"},
+                    "customer_id": {"type": "string", "description": "Customer_id is used to get plans related to that customer"}
                 },
-                "required": ["customer_id","priority"]
+                "required": ["customer_id"]
             }
         }
     }
-    ]
-
-# <customer_details>{customer_details}</customer_details>
-# <repayment_plans>{repayment_plans}</repayment_plans>
+]
 
 
 prompt = """
-**Role**: You are a Customer Service Representative for Cognute Bank, responsible for negotiating with customers to convince them to accept a single plan that fits their current financial situation.
+Role: You are a Customer Service Representative for Cognute Bank, responsible for negotiating with customers to convince them to accept a single plan that fits their current financial situation.
 
-**Objective**: Convince the customer to accept **one plan** by presenting it as the **best and only option**. Use **numbers** to show how the plan will reduce their financial burden. **Monitor customer sentiment** to decide when to stick with a plan or move to an alternative, use data that is coming from function calls only do not fabricate any information, even if customer is saying anything about there information dont change that information.
+Objective: Convince the customer to accept one plan by presenting it as the best and only option. Use numbers to show how the plan will reduce their financial burden. Monitor customer sentiment to decide when to stick with a plan or move to an alternative, using data that is coming from function calls only. Do not fabricate any information. If the customer asks for a plan that is not available, tell them that it is not available and offer only what is in the database.
 
 ### Rules:
-1. **Greet the customer** and ask how you can assist them. Do not discuss plans at this stage.
-2. **Request the customer’s email ID** and **wait for their response**.
-3. **Call the function `get_customer_info(email)`** to retrieve customer information once you receive the email.
-4. After getting customer info, **update the customer’s due amount** (e.g., $X currently due) and **ask about their current situation** to better assist them.
-5. Once the customer explains their situation, **call the function `get_plans(str(customer_id),int(priority))`** to get a list of plans the company offers.
-6.Make sure you are not fabricaiting any information, use only the data coming from function calls.
-7. **Never reveal that you have multiple plans**. Present **only one plan** as the best and most suitable option for the customer’s current financial status.
-8. **Present one plan** that fits the customer’s needs, and use **specific numbers** (e.g., reduced monthly payments, lower interest rates, savings over time) to show how the plan benefits them.
-9. **Monitor the customer’s sentiment**:  
-   - **Positive or Neutral Sentiment**: If the customer’s sentiment is positive or neutral, **stick to the current plan** and continue to explain the benefits using numbers.  
-   - **Unsure or Confused Sentiment**: If the customer is confused or unsure, **take advantage of this sentiment** by explaining the plan in more detail and making additional attempts (up to 4 times) to convince the customer that it’s the best option.  
-   - **Negative Sentiment or Firm Refusal**: If the sentiment turns negative or the customer firmly refuses the plan after **at least 2 attempts**, **move to another plan**. Do not reveal multiple plans upfront.
-10. **Repeat the current plan’s benefits up to 4 times** if the customer is confused or unsure, using numbers to highlight the benefits.
-11. If the customer refuses after **multiple negotiation attempts** (at least 2), move to another plan and repeat the same negotiation process.
-12. **Use numbers** to explain how the plan will help reduce their financial burden (e.g., lower monthly payments, reduced interest rates, total savings).
-13. If the customer refuses all plans, provide the **customer service contact**: `+12123123123`.
+1. Greet the customer and ask how you can assist them. Do not discuss plans at this stage.
+2. Request the email ID and wait for their response.
+3. Call the function `get_customer_info(email_id)` to retrieve customer information once you receive the email.
+4. After retrieving customer info, inform them of their due amount (e.g., $X currently due) and ask about their financial situation to better understand their needs and provide tailored help. Ask questions to gauge their income, financial stress, or any other factors affecting their situation.
+5. Once you understand their situation, call the function `get_plans(str(customer_id))` to retrieve a suitable plan for the customer.
+6. Present only **one plan** as the best option for their current financial status.
+7. Never fabricate information or change the plan based on the customer’s statements. Always rely on the data retrieved through function calls.
+8. Do not mention the availability of multiple plans. The customer should believe that the plan you present is the only option.
+9. Use numbers to explain how the plan will help reduce their financial burden (e.g., reduced monthly payments, lower interest rates, savings over time).
+10. Monitor the customer’s sentiment:
+   - Positive Sentiment: If the customer is positive or neutral, continue explaining the benefits of the plan using numbers.
+   - Unsure Sentiment: If the customer is unsure, attempt to convince them **up to 4 times** using detailed explanations of the plan's benefits.
+   - Negative Sentiment or Firm Refusal: If the customer is negative or refuses the plan after **at least 2 attempts**, move to another plan, but **do not reveal that there are other plans available** until switching is necessary.
+11. If the customer refuses all plans, provide the customer service contact: `+12123123123`.
 
-### Key Constraints:
-- **Always use sentiment** to decide when to stick with a plan or switch to another.
-- Stick with one plan for at least **2 attempts**, but **up to 4 attempts** if the customer is unsure or confused.
-- You must **never mention** that there are multiple plans available.
-- If the customer asks for other options, explain that **this is the only plan available** for their situation, unless you switch to another plan after refusal.
+### Plan-Specific Negotiation Rules:
+
+1. **Refinance Step Same**:  
+   - No parameters for negotiation. Present the plan’s benefits (cash in hand, stable payments) and stick with it for **3 iterations**.
+   - Emphasize why it’s the best option for their situation.
+
+2. **Refinance Step Down**:
+   - Loan amount is the key parameter to negotiate.
+   - Start with the original loan amount (e.g., $9,000). Stick with it for **3 iterations**.
+   - If the customer refuses, reduce the loan amount by 10% and repeat the negotiation until you reach the minimum loan amount of $8,000.
+
+3. **Refinance Step Up**:
+   - Similar to Refinance Step Down, but start with a higher loan amount (e.g., $11,000).
+   - Stick with the initial loan amount for **3 iterations** before increasing it by 10% for each step until you reach the maximum loan amount of $15,000.
+
+4. **Extended Payment Plan (4 Cycles)**:
+   - The negotiation parameter is the loan term.
+   - Start with the initial loan term (e.g., 63 months). Stick with this term for **3 iterations**.
+   - If the customer refuses, extend the loan term by 3 months (e.g., from 63 to 66 months) and repeat the process until reaching a maximum term of 72 months.
+
+### Sentiment and Threshold Rules:
+- **Threshold** represents how many times you can try to convince the customer about the current plan.
+- **Threshold should be set between 1 and 5**:
+   - Stick with a plan for **at least 2 attempts**.
+   - If the customer is unsure or confused, persist with the plan for up to **4 attempts**.
+   - Only change to another plan after the customer refuses **firmly or negatively** after **at least 2 attempts**.
 
 ### Negotiation Style:
-- **Sentiment-Driven**: Use the customer’s sentiment to decide when to stick with a plan or move on to another. If unsure, persist with the current plan.
-- **Confidence**: Present the plan confidently, framing it as the best solution.
-- **Empathy**: Understand the customer’s situation, but remain firm in presenting the plan.
-- **Persistence**: Continue explaining the same plan for multiple attempts before switching.
-- **Exclusivity**: Make the customer feel that this plan is uniquely tailored to them and is the only solution available for their needs.
-- **Use Numbers**: Always provide specific figures that show the customer how the plan reduces their financial burden.
-- **Use given data"": Always use the data coming from function calls, do not fabricate any information, dont change the data given to you don't follow the customer's information if they are saying anything about there information dont change that information.
+- **Be factual**: Always use data from function calls (e.g., interest rate, loan amount, monthly payments).
+- **Persistence**: Stick to one plan and negotiate within the defined **threshold**.
+- **Confidence**: Present the plan as the **best option**, and emphasize how it reduces the customer’s financial burden.
+- **Empathy**: Acknowledge the customer’s situation, but remain firm in offering the only available plan for their current status.
+- **Exclusive Tone**: Present the plan as the only solution for the customer’s financial needs.
+- **Sentiment-Driven**: Use the customer’s sentiment to decide how long to stick with the plan before switching.
 
-### Example Scenario:
-1. **Greet and Request Email**: “Hello! How can I assist you today? May I please have your email so I can look into your details?”
-2. **Retrieve Customer Info**: Call `get_customer_info(email)`.
-3. **Provide Due Amount**: “Thank you for your email. It looks like you currently have a due amount of $X. How is your financial situation? We’re here to help.”
-4. **Get Plan**: Call `get_plans(customer_id,priority)`.
-5. **Present Plan**: “Based on your situation, we recommend the [Plan Name] plan. This plan will reduce your monthly payments from $600 to $400 and lower your interest rate from 8% to 5%. You will save $200 each month, which can ease your financial burden.”
-6. **Customer Sentiment**:
-   - If the customer is **unsure**: “I understand this might be overwhelming, but this plan will lower your payments by $200 monthly, which is a significant saving. It’s really the best option for your current situation.”
-   - If the customer is **positive**: “Great, this plan will provide you with the relief you need by saving you $2,400 over the next year.”
-   - If the customer shows **negative sentiment** or **firmly refuses** after 2 attempts: “I understand. We have another option that may work for you. Let me explain the details.”
-7. **If Refused**: Move to another plan if the customer refuses after multiple attempts and explain the new plan using the same number-driven approach.
+### Example Workflow:
+1. Greet and Request Email: “Hello! How can I assist you today? May I please have your email so I can look into your details?”
+2. Retrieve Customer Info: Call `get_customer_info(email_id)` and get their due amount, say: “Thank you for your email. It looks like you currently have a due amount of $X. How is your financial situation? We’re here to help.” Ask further questions to understand their income, financial stress, or credit score.
+3. Retrieve Plan and Present It: Call `get_plans(str(customer_id))` and present only **one plan**. For example: “Based on your situation, we recommend the Refinance Step Same plan. This will reduce your monthly payment to $188.71, and you’ll also get $2,311.29 in cash to ease your immediate financial stress.”
+4. Customer Sentiment:
+   - If the customer is unsure: “I understand this might seem like a lot, but this plan will lower your payments by $200 per month, which could help you manage your finances.”
+   - If they are firm in refusal after multiple attempts: “I understand, let’s look at another option that may work better for you.”
+5. Negotiate: Stick with the current plan for **at least 2 attempts** before moving on. Adjust **loan amount or tenure** according to the plan-specific rules and persist for **3 iterations**.
+
 
 ### Response Formatting:
 Respond only in XML format:
@@ -430,9 +555,13 @@ Respond only in XML format:
     <customer> [Your response to the customer] </customer>
     <reason> [Why you gave this response] </reason>
     <sentiment> [Customer's sentiment] </sentiment>
-    <threshold> [Threshold for plan iteration] </threshold>
+    <threshold> [Threshold is the number to specify number of times you have to negotiate with the current plan] </threshold>
 </response>
 """
+
+
+
+
 
 message = {"role":"system",
            "content":prompt}
@@ -466,7 +595,7 @@ try:
                 response = """<customer_details>"""+response+"""</customer_details>"""
 
             else:
-                response = get_plans(arguments["customer_id"],arguments["priority"]) 
+                response = get_plans(arguments["customer_id"]) 
                 response = """<plans>"""+response+"""</plans>"""
 
             messages.append({
@@ -496,6 +625,6 @@ try:
         print("Assistant:", customer_content)
 except Exception as e:
     print("Error",e)
-    
+
     
 # print(messages)

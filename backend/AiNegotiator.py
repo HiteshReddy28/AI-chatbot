@@ -366,6 +366,7 @@ class Conversation:
     ]
         if(system):
             self.messages.append({"role":"system","content":system})
+            
     def generate(self,user_input):
         self.messages.append({"role":"user","content":user_input})
         response = client.chat.completions.create(
@@ -388,6 +389,7 @@ class Conversation:
         print(threshold+' '+sentiment)
         self.messages.append({"role":"assistant","content":response})
         return customer_content
+    
     def function_calling(self,response):
         while(response.choices[0].message.content == None):
             functionname =  response.choices[0].message.tool_calls[0].function.name
@@ -413,6 +415,8 @@ class Conversation:
             temperature=0.2,
         )
         return response
+    
+    
 app = FastAPI()
 
 
