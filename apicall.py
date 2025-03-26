@@ -20,7 +20,7 @@ def chat_with_model(prompt: str) -> str:
     Returns:
         str: The model's response
     """
-    TOKEN = "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"
+  
     
     # First verify the token
     if not verify_token(TOKEN):
@@ -43,8 +43,11 @@ def chat_with_model(prompt: str) -> str:
             "do_sample": True,
             "return_full_text": False
         }
-    }
+    } 
+
+
     
+       
     while True:
         try:
             response = requests.post(API_URL, headers=headers, json=payload)
