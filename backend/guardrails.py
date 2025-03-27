@@ -33,7 +33,7 @@ BLOCKED_OUTPUT_PATTERNS = [
     r"<function>",  # invalid output leaking function names
 ]
 
-# Known hallucinated/invalid plans that shouldn't exist
+# Invalid plans that shouldn't exist
 DISALLOWED_PLAN_TERMS = [
     "plan b", "golden plan", "universal forgiveness", "plan override", "free plan",
 ]
