@@ -15,6 +15,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import xml.etree.ElementTree as ET
 import json
 import re
+from guardrails import enforce_input_guardrails, enforce_output_guardrails
+
 
 from calculation import (
     refinance_same,
@@ -261,9 +263,6 @@ async def read_root():
     return {"message": "Hello from FastAPI"}
 
 
-
-
-
 # Fixing 422 Unprocessable Content for /api/chat
 class LoanNegotiationRequest(BaseModel):
     client_id: str
@@ -406,7 +405,7 @@ class LoanNegotiationRequest(BaseModel):
     client_id: str
     requested_changes: str
 
-#Call Llama3 Model
+'''#Call Llama3 Model
 import requests
 
 def call_llama3(messages):
@@ -449,8 +448,8 @@ def call_llama3(messages):
 
     except Exception as e:
         print(f"ERROR: AI API call failed -> {str(e)}")
-        raise HTTPException(status_code=500, detail=f"AI API call failed: {str(e)}")
-    
+        raise HTTPException(status_code=500, detail=f"AI API call failed: {str(e)}") 
+'''
 
 tools = [{
         "type": "function",
@@ -657,12 +656,16 @@ def negotiate_with_ai(client_id, user_input):
         max_tokens=400,
         tools=tools,
         tool_choice="auto",
-        temperature=0.2,
+        temperature=0.3,
     )
 
 
     while True:
         response_msg = response.choices[0].message
+
+        #Input guardrails
+        if not enforce_input_guardrails(user_input):
+            raise HTTPException(status_code=400, detail="Inappropriate or unsafe input detected.")
 
         if hasattr(response_msg, "tool_calls") and response_msg.tool_calls:
             tool_call = response_msg.tool_calls[0]
@@ -716,7 +719,7 @@ def negotiate_with_ai(client_id, user_input):
             max_tokens=400,
             tools=tools,
             tool_choice="auto",
-            temperature=0.2,
+            temperature=0.3,
             )
             
             continue
@@ -730,8 +733,24 @@ def negotiate_with_ai(client_id, user_input):
 
         print("AI Final Response:", ai_response)
 
+        # Loop again until a real <response> comes in
+        if "<function>" in ai_response:
+            response = client.chat.completions.create(
+            model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
+            messages=messages,
+            max_tokens=400,
+            tools=tools,
+            tool_choice="auto",
+            temperature=0.3,
+            )
+            continue
+
         if not ai_response.strip().startswith("<response>"):
             raise HTTPException(status_code=500, detail="AI response did not contain valid <response> XML block.")
+        
+        #Output Guardrails
+        if not enforce_output_guardrails(ai_response):
+            raise HTTPException(status_code=500, detail="AI response failed guardrail checks.")
 
         messages.append({"role": "assistant", "content": ai_response})
         return ai_response
@@ -750,12 +769,39 @@ def negotiate_loan(request: LoanNegotiationRequest):
 
         if not request.requested_changes or len(request.requested_changes.strip()) == 0:
             raise HTTPException(status_code=400, detail="Requested changes cannot be empty.")
-
         
+        #Input Guardrails
+        if not enforce_input_guardrails(request.requested_changes):
+            raise HTTPException(
+                status_code=400,
+                detail="Inappropriate or unsafe input detected. Please rephrase respectfully."
+            )
+        
+        '''# Rebuild message history from DB
+        cursor.execute("""
+            SELECT sender, message FROM chat_history 
+            WHERE client_id = %s 
+            ORDER BY timestamp ASC
+        """, (client_id,))
+        history = cursor.fetchall()
+
+        messages = []
+        messages.append({"role": "system", "content": prompt})  # reuse existing system prompt
+
+        for sender, message in history:
+            role = "user" if sender == "user" else "assistant"
+            messages.append({"role": role, "content": message})
+
+        # Append the current user message
+        messages.append({"role": "user", "content": request.requested_changes})'''
+
+        # Call AI negotiation
         ai_response = negotiate_with_ai(client_id, request.requested_changes)
+        
 
         if not ai_response or not isinstance(ai_response, str):
             raise HTTPException(status_code=500, detail="AI response is empty or invalid.")
+
 
         # Extract the <response> XML block safely
         match = re.search(r"<response>.*?</response>", ai_response, re.DOTALL)
@@ -777,6 +823,10 @@ def negotiate_loan(request: LoanNegotiationRequest):
 
         customer_content = customer_node.text.strip()
 
+        #Output Guardrails
+        if not enforce_output_guardrails(customer_content):
+            raise HTTPException(status_code=500, detail="AI response failed content guardrails.")
+        
         # Store chat history
         cursor.execute(
             "INSERT INTO chat_history (client_id, sender, message) VALUES (%s, %s, %s)",
