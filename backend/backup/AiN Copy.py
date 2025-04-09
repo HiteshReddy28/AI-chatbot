@@ -588,7 +588,7 @@ GENERAL RULES:
 2. Request the **Client ID** and wait for their response before proceeding.
 3. Upon receiving the Client ID, call `get_client_details(client_id)` to retrieve customer data.
 4. Inform the customer of their **due amount and next payment date**, then ask about their current concerns or financial difficulty. Do not suggest any plan yet.
-5. Only if a client says they are facing difficulties or want to change their loan plan, call appropriate functions `get_plans(str(customer_id),int(priority))' to retrieve the relevant plan (`refinance_same`, `refinance_step_down`, `refinance_step_up`, `extended_payment_plan`, `settlement_plan_with_waivers` )
+5. Only if a client says they are facing difficulties or want to change their loan plan, call appropriate functions `get_plans(str(customer_id),int(priority))' and retrieve the relevant plan (`refinance_same`, `refinance_step_down`, `refinance_step_up`, `extended_payment_plan`, `settlement_plan_with_waivers` )
 6. Present **only one plan at a time**, starting with the highest priority. Never mention that there are multiple plans.
 7. Use specific numbers returned by the **correct tool function** to back up the benefits (e.g., reduced payment, interest waiver).
 8. If the customer refuses, try to persuade them for at least 2 times on a given plan and the threshold number of times before switching.
@@ -822,10 +822,13 @@ def negotiate_with_ai(client_id, user_input):
         messages.append({"role": "assistant", "content": ai_response})
         return ai_response
 
+
+
+#Negotiator
 @app.post("/api/negotiate")
 def negotiate_loan(request: LoanNegotiationRequest):
     try:
-        print("Received request:", request.dict())
+        print("Received request:", request.dict())  # Debugging
 
         client_id = str(request.client_id).strip()
         if not client_id:
@@ -833,7 +836,24 @@ def negotiate_loan(request: LoanNegotiationRequest):
 
         if not request.requested_changes or len(request.requested_changes.strip()) == 0:
             raise HTTPException(status_code=400, detail="Requested changes cannot be empty.")
+        
+         #Input Guardrails
+        if not enforce_input_guardrails(request.requested_changes):
+             log_flagged_input(client_id, request.requested_changes)  
+             raise HTTPException(
+             status_code=400,
+             detail={
+             "error": "We're here to help! Please keep the conversation respectful so we can assist you better."
+             }
+         )
 
+        #if is_rate_limited(client_id):
+           # raise HTTPException(
+            #status_code=429,
+            #detail={"error": "Too many flagged attempts. Please wait and try again shortly."}
+            #)
+
+        
         # Rebuild message history from DB
         cursor.execute("""
             SELECT sender, message FROM chat_history 
@@ -842,56 +862,61 @@ def negotiate_loan(request: LoanNegotiationRequest):
         """, (client_id,))
         history = cursor.fetchall()
 
-        messages = [{"role": "system", "content": prompt}]
+        messages = []
+        messages.append({"role": "system", "content": prompt})  # reuse existing system prompt
+
         for sender, message in history:
             role = "user" if sender == "user" else "assistant"
             messages.append({"role": role, "content": message})
 
+        # Append the current user message
         messages.append({"role": "user", "content": request.requested_changes})
 
-        from backup import run_negotiate_chain
-        ai_response = run_negotiate_chain(request.requested_changes, client_id)
-        print("Raw AI Response:", ai_response)
+        # Call AI negotiation
+        ai_response = negotiate_with_ai(client_id, request.requested_changes)
         
+
         if not ai_response or not isinstance(ai_response, str):
             raise HTTPException(status_code=500, detail="AI response is empty or invalid.")
 
-        print("Raw AI Response:", ai_response)
 
-    #     # Ensure the string starts with <response> before XML parsing
-    #     ai_response = ai_response.strip()
-    #     if not ai_response.startswith("<response>"):
-    #         raise HTTPException(status_code=500, detail="AI response did not start with <response> block.")
+        # Extract the <response> XML block safely
+        match = re.search(r"<response>.*?</response>", ai_response, re.DOTALL)
+        if not match:
+            print("Malformed AI response:", ai_response)
+            raise HTTPException(status_code=500, detail="AI response did not contain valid <response> XML block.")
 
-    #     # Extract the <response> block
-    #     match = re.search(r"<response>.*?</response>", ai_response, re.DOTALL)
-    #     if not match:
-    #         raise HTTPException(status_code=500, detail="AI response did not contain valid <response> XML block.")
+        xml_response = match.group(0)
 
-    #     xml_response = match.group(0)
+        try:
+            root = ET.fromstring(xml_response)
+        except ET.ParseError as e:
+            print("XML parsing error:", str(e))
+            raise HTTPException(status_code=500, detail="Failed to parse AI XML response.")
 
-    #     try:
-    #         root = ET.fromstring(xml_response)
-    #     except ET.ParseError as e:
-    #         raise HTTPException(status_code=500, detail=f"Failed to parse AI XML response: {str(e)}")
+        customer_node = root.find("customer")
+        if customer_node is None or customer_node.text is None:
+            raise HTTPException(status_code=500, detail="Missing <customer> tag or text in AI response.")
 
-    #     customer_node = root.find("customer")
-    #     customer_content = customer_node.text.strip() if customer_node is not None and customer_node.text else xml_response
+        customer_content = customer_node.text.strip()
 
-    #     cursor.execute(
-    #         "INSERT INTO chat_history (client_id, sender, message) VALUES (%s, %s, %s)",
-    #         (client_id, "bot", customer_content)
-    #     )
-    #     conn.commit()
+        #Output Guardrails
+        if not enforce_output_guardrails(customer_content):
+            raise HTTPException(status_code=500, detail="AI response failed content guardrails.")
+        
+        # Store chat history
+        cursor.execute(
+            "INSERT INTO chat_history (client_id, sender, message) VALUES (%s, %s, %s)",
+            (client_id, "bot", customer_content)
+        )
+        conn.commit()
 
-    #     return {"negotiation_response": customer_content}
-
-        return {"negotiation_response": ai_response}
+        return {"negotiation_response": customer_content}
 
     except Exception as e:
         print(f"Error in /api/negotiate: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
-
+    
 
 def generate(self, user_input):
     self.messages.append({"role": "user", "content": user_input})

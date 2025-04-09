@@ -1,4 +1,5 @@
 from typing import Optional
+from jpt import send_violation_to_ai
 
 
 def calculate_monthly_payment(loan_amount: float, interest_rate: float, loan_term: int) -> float:
@@ -22,7 +23,7 @@ def refinance_same(loan_amount: float, interest_rate: float, loan_term: int, rem
         "interest_rate": interest_rate,
         "monthly_payment": monthly_payment,
         "refunded_amount": refunded_amount,
-        "description": "Same terms (interest rate, tenure etc...) and same loan amount. The difference between original loan amount and remaining balance is refunded to help the customer ."
+        "description": "A new loan is issued with Same terms (interest rate, tenure etc...) and same loan amount. And the old loan is paid off and the difference amount of original loan amount - remaining amount will be given as cash in hand to the customer to help them."
     }
 
 
@@ -30,13 +31,19 @@ def refinance_same(loan_amount: float, interest_rate: float, loan_term: int, rem
 def refinance_step_down(loan_amount: float, interest_rate: float, loan_term: int, reduce_percent: float) -> dict:
    
     adjusted_loan = loan_amount * (1 - reduce_percent / 100)
+
+    if (reduce_percent > 50):
+        send_violation_to_ai(function_name="refinance_step_down", message="Loan reduction cannot exceed 50%. Maximum allowed is 50%.", violation_type="BusinessRule")
+
+    
+
     return {
         "type": f"Refinance Step Down ({reduce_percent}%)",
         "new_loan_amount": round(adjusted_loan, 2),
         "loan_term": loan_term,
         "interest_rate": interest_rate,
         "monthly_payment": calculate_monthly_payment(adjusted_loan, interest_rate, loan_term),
-        "description": f"Loan reduced by {reduce_percent}%"
+        "description": f"Loan reduced by {reduce_percent}% in the interval of 10% upto 50% max"
     }
 
 

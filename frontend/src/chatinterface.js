@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Settings, RefreshCw, ArrowLeft, Send, Paperclip, Image, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './Chatapp.css';
 import Navbar from "./navbar.js";
 
-
 const ChatInterface = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [messages, setMessages] = useState([]);
+  const [isBotTyping, setIsBotTyping] = useState(false);
+  const messagesEndRef = useRef(null);
   const navigate = useNavigate();
 
   const commonPrompts = [
@@ -28,6 +29,14 @@ const ChatInterface = () => {
       fetchChatHistory(client_id, token);
     }
   }, [navigate]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const clearChatHistory = async () => {
     const client_id = localStorage.getItem("client_id");
@@ -95,31 +104,31 @@ const ChatInterface = () => {
 
   const handleSendMessage = async () => {
     if (inputMessage.trim()) {
-      try {
-        const userMessage = {
-          text: inputMessage,
-          sender: "user",
+      const userMessage = {
+        text: inputMessage,
+        sender: "user",
+        timestamp: new Date().toLocaleTimeString(),
+      };
+
+      setMessages((prev) => [...prev, userMessage]);
+      storeChatMessage("user", inputMessage);
+      setInputMessage('');
+      setIsBotTyping(true);
+
+      const response = await callLlamaAPI(inputMessage);
+
+      setIsBotTyping(false);
+
+      if (response && response.negotiation_response) {
+        const botMessage = {
+          text: response.negotiation_response,
+          sender: "bot",
           timestamp: new Date().toLocaleTimeString(),
         };
 
-        setMessages((prev) => [...prev, userMessage]);
-        storeChatMessage("user", inputMessage);
-        setInputMessage('');
-
-        const response = await callLlamaAPI(inputMessage);
-
-        if (response && response.negotiation_response) {
-          const botMessage = {
-            text: response.negotiation_response,
-            sender: "bot",
-            timestamp: new Date().toLocaleTimeString(),
-          };
-
-          setMessages((prev) => [...prev, botMessage]);
-          storeChatMessage("bot", response.negotiation_response);
-        }
-      } catch (error) {
-        console.error("Error:", error);
+        setMessages((prev) => [...prev, botMessage]);
+        storeChatMessage("bot", response.negotiation_response);
+      } else {
         const errorMessage = {
           text: "Sorry, I encountered an error. Please try again.",
           sender: "bot",
@@ -140,7 +149,8 @@ const ChatInterface = () => {
         },
         body: JSON.stringify({
           client_id: localStorage.getItem("client_id"),
-          requested_changes: prompt
+          requested_changes: prompt,
+          prompt: prompt
         }),
       });
 
@@ -176,19 +186,15 @@ const ChatInterface = () => {
             <button className="clear-chat-button" onClick={clearChatHistory}>
               <Trash2 className="clear-icon" /> Clear Chat
             </button>     
-            
           </div>
         </div>
         
         <div className="main-content">
           <div className="chat-wrapper">
-            {/* Common Prompts are now always visible */}
             <div className="prompt-header">
               <h2>Hi there,</h2>
               <h3>What would you like to know?</h3>
-              <p className="prompt-subtext">
-                Start with one of the most common prompts below or use your own to begin
-              </p>
+              <p className="prompt-subtext">Start with one of the most common prompts below or use your own to begin</p>
             </div>
 
             <div className="prompt-grid">
@@ -210,13 +216,29 @@ const ChatInterface = () => {
                   className={`message-row ${message.sender === 'user' ? 'user' : 'bot'}`}
                 >
                   <div className={`message-bubble ${message.sender === 'user' ? 'user-message' : 'bot-message'}`}>
-                    <p>{message.text}</p>
-                    <span className="message-time">
-                      {message.timestamp}
-                    </span>
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: message.text
+                          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                          .replace(/•/g, "<li>")
+                          .replace(/<li>(.*?)<\/li>/g, "<ul><li>$1</li></ul>")
+                          .replace(/\n/g, "<br/>")
+                      }}
+                    />
+                    <span className="message-time">{message.timestamp}</span>
                   </div>
                 </div>
               ))}
+
+              {isBotTyping && (
+                <div className="message-row bot">
+                  <div className="message-bubble bot-message typing-indicator">
+                    <span>Replying</span><span className="dot">.</span><span className="dot">.</span><span className="dot">.</span>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </div>
 
             <div className="input-container">
@@ -231,15 +253,12 @@ const ChatInterface = () => {
                 />
                 <div className="send-wrapper">
                   <span className="online-status">Online</span>
-                  <button 
-                    className="send-button"
-                    onClick={handleSendMessage}
-                  >
+                  <button className="send-button" onClick={handleSendMessage}>
                     <Send className="send-icon" />
                   </button>
                 </div>
               </div>
-              
+
               <div className="attachment-buttons">
                 <button className="attach-button">
                   <Paperclip className="attach-icon" />
@@ -257,4 +276,5 @@ const ChatInterface = () => {
     </>
   );
 };
+
 export default ChatInterface;
