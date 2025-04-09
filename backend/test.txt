@@ -161,3 +161,14 @@ Respond only in XML format:
     <sentiment> [Customer's sentiment] </sentiment>
     <threshold> [Number of times to negotiate] </threshold>
 </response>
+
+
+# from IPython.display import Image, display
+
+
+# graph_image = app.get_graph().draw_mermaid_png()
+
+# with open('image_output.png', 'wb') as f:
+#     f.write(graph_image)
+
+# display(Image(filename='image_output.png'))

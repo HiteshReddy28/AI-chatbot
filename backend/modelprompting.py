@@ -396,7 +396,6 @@ def get_plans(customer_id:str):
         "CUST123456": {
     "1": {
       "plan_name": "Refinance Step Same",
-
       "new_loan_amount": 10000,
       "new_interest_rate": 0.05,
       "new_loan_term_months": 60,
