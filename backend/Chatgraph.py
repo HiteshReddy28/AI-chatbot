@@ -9,7 +9,7 @@ import json
 import random
 from customer_details import get_customer_details
 from plans import get_plans
-from backend.calculations import (
+from calculation import (
     refinance_same, refinance_step_down, refinance_step_up,
     extended_payment_plan, settlement_plan_with_waivers
 )
