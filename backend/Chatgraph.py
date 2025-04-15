@@ -6,35 +6,17 @@ from langchain_together import ChatTogether
 from dotenv import load_dotenv
 import os
 import json
+import random
 from customer_details import get_customer_details
 from plans import get_plans
-from calculation import (
+from backend.calculations import (
     refinance_same, refinance_step_down, refinance_step_up,
     extended_payment_plan, settlement_plan_with_waivers
 )
 
-def multiply(a,b):
-    return a * b
 
 load_dotenv()
 key = os.getenv("TOGETHER_API_KEY")
-
-llm = ChatTogether(model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free", api_key=key)
-
-tool_mapping = {
-    "get_customer_details": get_customer_details,
-    "get_plans": get_plans,
-    "refinance_same": refinance_same,
-    "refinance_step_down": refinance_step_down,
-    "refinance_step_up": refinance_step_up,
-    "extended_payment_plan": extended_payment_plan,
-    "settlement_plan_with_waivers": settlement_plan_with_waivers,
-    "multiply": multiply,
-}
-
-
-llm_with_tools = llm.bind_tools(list(tool_mapping.values()))
-
 
 class State(TypedDict):
     messages: list
@@ -43,21 +25,228 @@ class State(TypedDict):
     Sentiment: str
     Threshold: int
     Greedy: int
-    prompt: str
+    pchange: bool
+    user_history : bool
+
+
+
+
+llm = ChatTogether(model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free", api_key=key)
+
+tool_mapping = {
+    "refinance_same": refinance_same,
+    "refinance_step_down": refinance_step_down,
+    "refinance_step_up": refinance_step_up,
+    "extended_payment_plan": extended_payment_plan,
+    "settlement_plan_with_waivers": settlement_plan_with_waivers,
+}
+
+tools = [{
+        "type": "function",
+        "function": {
+            "name": "get_customer_details",  
+            "description": "Retrieve customer details by client ID",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "email": {"type": "string", "description": "Customer ID to retrieve details"}
+                },
+                "required": ["email"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_plans",
+            "description": "Retrieve financial plans of a customer",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "customer_id": {"type": "string", "description": "Customer ID for fetching plans"},
+                },
+                "required": ["customer_id"]
+            }
+        }
+    },
+
+    {
+        "type": "function",
+        "function": {
+            "name": "refinance_same",
+            "description": "Calculate new terms for Refinance Step Same plan",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "Principal": {"type": "number"},
+                    "interest_rate": {"type": "number"},
+                    "loan_term": {"type": "number"},
+                    "remaining_balance": { "type": "number" },
+                    "due": {"type": "number"},
+                },
+                "required": ["Principal", "interest_rate", "loan_term","remaining_balance", "due"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "refinance_step_down",
+            "description": "Calculate new terms for Refinance Step Down plan",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "Principal": {"type": "number"},
+                    "interest_rate": {"type": "number"},
+                    "loan_term": {"type": "number"},
+                    "reduce_percent": {"type": "number"},
+                    "remaining_balance": { "type": "number" },
+                    "due": {"type": "number"},
+                    
+                },
+                "required": ["Principal", "interest_rate", "loan_term", "reduce_percent","remaining_balance", "due"]
+            }
+        }
+    },
+    
+    {
+        "type": "function",
+        "function": {
+            "name": "extended_payment_plan",
+            "description": "Calculate new terms for Extended Payment Plan",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "Principal": {"type": "number"},
+                    "interest_rate": {"type": "number"},
+                    "original_term": {"type": "number"},
+                    "extension_cycles": {"type": "number"}
+                },
+                "required": ["Principal", "interest_rate", "original_term", "extension_cycles"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "settlement_plan_with_waivers",
+            "description": "Calculate settlement plan with waivers",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "Principal": {"type": "number"},
+                    "fee_waiver_percent": {"type": "number"},
+                    "interest_waiver_percent": {"type": "number"},
+                    "principal_waiver_percent": {"type": "number"}
+                },
+                "required": ["Principal", "fee_waiver_percent", "interest_waiver_percent", "principal_waiver_percent"]
+            }
+        }
+    },
+    {
+    "type": "function",
+    "function": {
+        "name": "refinance_step_up",
+        "description": "Calculates financials for Refinance Step Up plan with an increase percentage",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "Principal": {"type": "number"},
+                "interest_rate": {"type": "number"},
+                "loan_term": {"type": "integer"},
+                "increase_percent": {"type": "number", "description": "Percentage to increase the loan amount by"},
+                "remaining_balance": { "type": "number" },
+                "due": {"type": "number"},
+            },
+            "required": ["Principal", "interest_rate", "loan_term", "increase_percent","remaining_balance", "due"]
+        }
+    }
+    },
+]
+llm_with_tools = llm.bind_tools(list(tool_mapping.values()))
+# llm_with_tools = llm.bind_tools(tools)
 
 def input_node(state: State) -> State:
+    state["messages"].append({"role":"assistant", "content": "Hi, how can I assist you today?"})
     user_input = input("User: ")
     if user_input.lower() in ["exit", "quit", "bye", "goodbye"]:
         print("👋 Thanks for chatting! Have a great day.")
         exit()
+    # guarded_input = guard.validate()
+    # print(guarded_input)
+    # if(state["user_history"]):
+    #     state["Threshold"] = 4
+    # else:
+    #     state["Threshold"] = 3
     state["messages"].append({"role": "user", "content": user_input})
+    return state
+
+def sentiment_node(state: State) ->State:
+    sentiment_prompt = f"""
+    Use the following sentiment label
+    previous interaction & last message: {state["messages"]}
+    **SENTIMENT ANALYSIS** : understand the sentiment of user for each converation 
+        ## Examples to predict sentiment:
+            #Positive Sentiment
+                    1."That sounds like a reasonable refinance plan. I think I can go ahead with this."
+                    2."Thanks for explaining the extended payment plan. This really helps my current situation."
+                    3."I'm glad there’s a waiver option available. I feel more hopeful now."
+            #Negative Sentiment
+                    1."This still doesn’t work for me. I can’t afford even this much right now."
+                    2."I’ve already explained I don’t want to refinance again. This is frustrating."
+                    3."None of these plans are helping me. Why can’t you understand my situation?
+            #Neutral Sentiment
+                    1."Can you explain how the step-down refinance works again?"
+                    2."What happens if I miss another payment?"
+                    3."I just want to know all my options before deciding anything."
+
+    Ouput: Just give me the sentiment of the user’s last message like 'positive', 'negative', or 'neutral'
+
+    
+"""
+    response = llm.invoke(sentiment_prompt)
+    response = response.content.lower()
+    # print(response)
+    if state["Threshold"] <= 0:
+        state["pchange"] = True
+    elif response == "positive" and state["Threshold"] < 4:
+        state["Sentiment"] = "positive"
+        state["Threshold"] += random.randint(2,3)
+    elif response == "negative":
+        state["Sentiment"] = "negative"
+        state["Threshold"] -= random.randint(1,2)
+    else:
+        state["Threshold"] += 1
+    print(f"{state["Threshold"]}:{state["pchange"]}:{state["Sentiment"]}")
     return state
 
 
 def chat_negotiation_node(state: State) -> State:
-    system_prompt = {"role": "system", "content": f"prompt: {state["prompt"]}, Customer_details:{state["customer_details"]}, plans: {state['plans']},sentiment: {state["Sentiment"]}, threshold:{state["Threshold"]}, greedy:{state['Greedy']}"}
+    prompt = f"""
+##Avaliable tool_calls: refinance_same,refinance_step_down,refinance_step_up,extended_payment_plan
+###Role:You are a Customer Service Representative for Cognute Bank, responsible for selecting a plan based on the customer's financial situation.
+####Instruction: You need to change the plan or percentage only if pchange is True, or else you need to stay with the same plan or percentage
+###Objective: Convince the customer to accept one plan by presenting it as the best and only option. Use numbers to show how the plan reduces their financial burden.Use pchange to change plan or percentage 
+
+pchange: {state["pchange"]}
+####Rules:
+1. Share the customer’s due amount, remaining balance, and due date (e.g., “$X due by [date]”). Ask about their financial situation.
+2. Select the plan based on the priority and greedy factor, make necessary tool call before presenting the plan to the customer.
+3. Never reveal the information about plans or percentages and do not accept the percentages or plans given by the customer.
+4. You must state on the same plan until pchange is true
+     - Present the plan to the customer, explaining how it will help them. Use numbers to show how the plan reduces their financial burden.
+     - Never reveal the information about other plans or percentages and do not accept the percentages or plans given by the customer.
+5. Greedy Factor (10):
+    - how greedy you want to be in your negotiation. The higher the number, the greedier you are.
+    - If greedy factor is high never accept what customer says just follow your rules, if greedy factor is low consider what customer is saying and adjust your rules accordingly.
+6. Never reveal multiple plans exist, even if asked. Always say, “This is the only viable option based on your data.”
+7. If all plans are rejected, provide the service contact: +12123123123.
+
+Output: Your response must be short, covering all the necessary information, you will iterate over the same plan for few time so dont give out all the information at once.
+"""
+    system_prompt = {"role": "system", "content": prompt + f"""Customer Details: {state['customer_details']}\nPlans: {state["plans"]}\n"""}
     full_messages = [system_prompt] + state["messages"] 
-    
+    # print(full_messages)
     response = llm_with_tools.invoke(full_messages)
 
     state["messages"].append({
@@ -66,7 +255,9 @@ def chat_negotiation_node(state: State) -> State:
         "additional_kwargs": response.additional_kwargs
     })
     return state
-
+# def plan_selector(state:State)->State:
+#     prompt = ""
+#     return state
 
 def tool_call_decider(state: State) -> str:
     last_msg = state["messages"][-1]
@@ -77,26 +268,42 @@ def tool_call_decider(state: State) -> str:
 
 def tool_call_node(state: State) -> State:
     last_msg = state["messages"][-1]
+    state["messages"].pop()
     tool_calls = last_msg.get("additional_kwargs", {}).get("tool_calls", [])
     tool = tool_calls[0]["function"]["name"]
     args = tool_calls[0]["function"]["arguments"]
     print(tool)
+    print(args)
     args = json.loads(args)
     if (tool in tool_mapping):
         if( tool == "get_customer_details"):
             tool_result = tool_mapping[tool](**args)
             state["customer_details"] = tool_result
+            state["messages"].append({
+                "role": "tool",
+                "content": "Details retrieved successfully",
+                "tool_call_id": tool_calls[0]["id"]
+            })
         elif (tool == "get_plans"):
             tool_result = tool_mapping[tool](**args)
             state["plans"] = tool_result
+            state["messages"].append({
+                "role": "tool",
+                "content": "plans retrieved successfully",
+                "tool_call_id": tool_calls[0]["id"]
+            })
+        
         else:
             tool_result = tool_mapping[tool](**args)
+            state["Threshold"] = 3
+            state["pchange"] = False
             state["messages"].append({
                 "role": "tool",
                 "name": tool,
                 "content": f"{tool_result}",
                 "tool_call_id": tool_calls[0]["id"]
             })
+        
     else:
         state["messages"].append({
                 "role": "tool",
@@ -106,38 +313,77 @@ def tool_call_node(state: State) -> State:
     return state
 
 MAX_HISTORY = 6
-MAX_SUMMARY_THRESHOLD = 12
+MAX_SUMMARY_THRESHOLD = 6
 
 def summarize_node(state: State) -> State:
     if len(state["messages"]) < MAX_SUMMARY_THRESHOLD:
-        print(len(state["messages"]))
+        # print(len(state["messages"]))
         return state
 
     print("Summarizing conversation to reduce token usage...")
+    
+    summary_text = state["messages"]
+    
+    summary_prompt =  f"""
 
-    messages_to_summarize = state["messages"][:-MAX_HISTORY]
-    summary_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages_to_summarize])
+###Role: You are a summarization assistant for Cognute Bank’s Recovery Solutions Team. Based on the provided conversation history, create a structured summary that includes:
 
-    summary_prompt = f"""Summarize the following customer interaction:\n\n\"\"\"\n{summary_text}\n\"\"\""""
+###MUST INCLUDE
+High-Level Overview – Briefly explain the overall state and goal of the conversation.
+Chronological Summary – List the key exchanges between assistant, user, and tool in order.
+Tool Calls – Mention if any tools were used and what was retrieved.
+Plan Negotiation – Mention if there was any negotiation or discussion about a resolution plan.
+Current State – Clearly indicate what stage the conversation is at and what the next agent should do.
+
+###Instructions:
+- Use only the information in the conversation.
+- Do NOT add or assume any information.
+- Do NOT include references to internal tools, functions, or system behavior .
+- Be clear, concise, and factual.
+\n
+Current Coversation:{summary_text}
+"""
     summary = llm.invoke([{"role": "system", "content": summary_prompt}]).content
 
-    summarized = {"role": "system", "content": f"[Conversation Summary]\n{summary}"}
-    state["messages"] = [summarized] + state["messages"][-MAX_HISTORY:]
+    summarized = {"role": "system", "content": f"[Conversation Summary: Use this to make decisions]\n{summary}"}
+    state["messages"] = []
+    state["messages"].append(summarized)
+    print(state["messages"])
     return state
 
 
 def output_node(state: State) -> State:
     last_msg = state["messages"][-1]
     last_response = last_msg["content"]
-    print(last_response)
+    print(f"LLM with tools: {last_response}")
     if not last_response:
-        print("⚠️ Assistant response was empty. Skipping rewrite.")
+        print(" Assistant response was empty. Skipping rewrite.")
         return state
 
-    prompt = f"""Response: {last_response}
-Improve the content make it better for customer to understand"""
+    prompt = f"""
+    Response: {last_response}
+###Role: You are a assistant representing Cognute Bank’s Team. You must negotiate a resolution plan with the user. Please provide a clear and concise plan that addresses the user’s concerns and meets the bank’s requirements.
+###Content: You are given with the plan details and some additional information. Please use this to negotiation techniques to convience the plan with the user.
+### Instructions:
+- Use only the information given 
+- Do NOT add or assume any information
+- Be clear, concise, and factual.
+- Talk like you are a human assistant
+- Structure the plan in a way that is easy to understand.
+
+#####Strategic Negotiation:
+-Start with a strong opening offer: Set the stage for a successful negotiation.  
+-Make concessions strategically: Don't give away too much too early.  
+-Use objective criteria: Base your arguments on facts and data, not emotions.  
+-Don't be afraid to walk away: If the negotiation isn't going your way, know when to terminate.  
+-Be flexible and adaptable: Adjust your strategy as the negotiation progresses.  
+-Focus on a win-win outcome: Strive for a solution that benefits both parties.  
+-Ensure everything is documented clearly and accurately. 
+
+Structure the output based on the information given.
+"""
     improved = llm.invoke(prompt).content
-    print(f"\n🤖 Assistant (Improved): {improved}\n")
+    print(f"Assistant: {improved}")
     return state
 
 
@@ -149,28 +395,30 @@ builder.add_node("chat_negotiation", chat_negotiation_node)
 builder.add_node("tool_call", tool_call_node)
 builder.add_node("summarize", summarize_node)
 builder.add_node("output", output_node)
-
+builder.add_node("sentiment",sentiment_node)
+# builder.add_node("plan_sector",plan_selector)
 builder.set_entry_point("input")
-builder.add_edge("input", "chat_negotiation")
+builder.add_edge("input", "sentiment")
+builder.add_edge("sentiment", "chat_negotiation")
 
 builder.add_conditional_edges(
     "chat_negotiation",
     tool_call_decider,
     {
         "tool_call": "tool_call",
-        "output": "summarize"
+        "output": "output"
     }
 )
 
 builder.add_edge("tool_call", "chat_negotiation")
-builder.add_edge("summarize", "output")
-builder.add_edge("output", "input")
+builder.add_edge("output","summarize")
+builder.add_edge("summarize", "input")
 builder.add_edge("input", END)
 
 app = builder.compile()
+
+
 # from IPython.display import Image, display
-
-
 # graph_image = app.get_graph().draw_mermaid_png()
 
 # with open('image_output.png', 'wb') as f:
@@ -180,156 +428,64 @@ app = builder.compile()
 
 state: State = {
     "messages": [],
-    "customer_details": {},
-    "plans": {},
+    "customer_details": get_customer_details("@email.com"),
+    "plans": get_plans("CUST123456"),
     "Sentiment": "",
-    "Threshold": 0,
+    "Threshold": 3,
     "Greedy": 0,
-    "prompt":  """
-    ###Role:You are a Customer Service Representative for Cognute Bank, responsible for negotiating with customers to convince them to accept one plan that fits their financial situation.
-###Objective:Convince the customer to accept one plan by presenting it as the best and only option. Use numbers to show how the plan reduces their financial burden. Monitor sentiment to decide when to persist with a plan or switch.
-
-###Rules:
-1. Greet the customer and ask how you can assist them. Do not discuss plans yet understand the Strategic Negotiation before starting negotiation.
-2.Request their email ID and wait for a response. Call get_customer_info(email_id) once to retrieve their data.
-3. Share the customer’s due amount, remaining balance, and due date (e.g., “$X due by [date]”). Ask about their financial situation.
-4. After the customer explains their situation, call get_plans(str(customer_id)) once to retrieve all plans in priority order.
-5. Never reveal the information about plans or percentages and do not accept the percentages or plans given by the customer.
-6. Execute the following steps until all plans are exhausted or the customer accepts a plan:
-    - Make tool call for the current plan or percentage you offer, set threshold to 3.
-    - Use the information from given to you from the tool call to negotiate.
-    - Update the threshold based on customer sentiment. use threshold handling  `rule 7` to assign a value to the threshold based on the customer’s sentiment.
-    - Use greedy factor for changing the plans or percentages. Use greedy factor whether to skip the current plan or percentage or move to the next one. if greedy factor is high dont skip any plans or rules revisit the same plan and percentage. If greedy factor is low skip you can consider customer percentages or plans but never change the order of the plans or percentages.
-    - STRICTLY FOLLOW IF GREEDY IS HIGH - Stick to the same plan until threshold is reached 0. if threshold is reached to 0 change the plan/percentage/number of cycle and start again from beginning
-7.Threshold Handling:
-    - Reset threshold to 3 when switching to a new plan or changing percentage.
-    - the threshold starts at 3 and is adjusted based on the customer's sentiment. If the customer is positive, the threshold increases by 2 or 3. If the customer is negative or unsure, the threshold decreases by 1. The threshold should reach 0 before switching to a new plan or changing the percentage. 
-    - If threshold hits 0, switch plans or percentage immediately.
-8. Greedy Factor (10):
-    - how greedy you want to be in your negotiation. The higher the number, the greedier you are.
-    - If greedy factor is high never accept what customer says just follow your rules, if greedy factor is low consider what customer is saying and adjust your rules accordingly.
-9. Never reveal multiple plans exist, even if asked. Always say, “This is the only viable option based on your data.”
-10. If all plans are rejected, provide the service contact: +12123123123.
-
-###Make function call only when instructed, avaliable tool_calls: get_customer_details, get_plans, refinance_same, refinance_step_down, refinance_step_up, extended_payment_plan, settlement_plan_with_waivers, multiply
-    """,
-
+    "pchange": False,
+    "user_history": False,
 }
 
-while True:
-    state = app.invoke(state)
-
-
- 
-
-
-# def input_node(state: State) -> State:
-#     user_input = input("User: ")
-#     if user_input.lower() in ["exit", "quit", "bye", "goodbye"]:
-#         state["messages"].append(AIMessage(content="👋 Thanks for chatting! Have a great day."))
-#         print("👋 Thanks for chatting! Have a great day.")
-#         exit()
-#     state["messages"].append(HumanMessage(content=user_input))
-#     return state
-
-# def chat_negotiation_node(state: State) -> State:
-#     system_prompt = SystemMessage(content=state["prompt"])
-#     full_messages = [system_prompt] + state["messages"]
-    
-#     response = llm_with_tools.invoke(full_messages)
-#     state["messages"].append(response)  
-#     print(state)
-#     return state
-
-# def tool_call_decider(state: State) -> str:
-#     last_msg = state["messages"][-1]
-#     if hasattr(last_msg, "tool_calls") and len(last_msg.tool_calls) > 0:
-#         return "tool_call"
-#     else:
-#         return "output" 
-# import json
-
-# def tool_call_node(state: State) -> State:
-#     last_msg = state["messages"][-1]
-#     tool_calls = getattr(last_msg, "tool_calls", []) or getattr(last_msg, "additional_kwargs", {}).get("tool_calls", [])
-
-#     for call in tool_calls:
-#         tool_name = call["function"]["name"]
-#         args = json.loads(call["function"]["arguments"])  # arguments might be JSON strings
-
-#         if tool_name in tool_mapping:
-#             try:
-#                 result = tool_mapping[tool_name](**args)
-#                 state["messages"].append(ToolMessage(content=str(result), tool_call_id=call["id"]))
-#             except Exception as e:
-#                 state["messages"].append(ToolMessage(content=f"[Tool Error] {e}", tool_call_id=call["id"]))
-#         else:
-#             state["messages"].append(ToolMessage(content=f"[Tool Not Found] {tool_name}", tool_call_id=call["id"]))
-
-#     return state
-
-
-# def output_node(state: State) -> State:
-#     last_msg = state["messages"][-1]
-#     last_response = getattr(last_msg, "content", "")
-
-#     if not last_response:
-#         print("⚠️ Assistant response was empty. Skipping rewrite.")
-#         return state
-
-#     prompt = f"""Rewrite the following customer support message to be clearer, friendlier, and more professional:\n\n\"\"\"{last_response}\"\"\""""
-#     improved = llm.invoke(prompt).content
-
-#     print("\n📬 Message Log:")
-#     for msg in state["messages"]:
-#         role = msg.__class__.__name__
-#         print(f"- {role}: {getattr(msg, 'content', '')}")
-
-#     print(f"\n🤖 Assistant (Improved): {improved}\n")
-#     return state
+print("Assistant: Welcome to the chat. How can I assist you today?")
+state = app.invoke(state,{"recursion_limit": 100})
 
 
 
-# builder = StateGraph(State)
-
-# builder.add_node("input", input_node)
-# builder.add_node("chat_negotiation", chat_negotiation_node)
-# builder.add_node("tool_call", tool_call_node)
-# builder.add_node("output", output_node)
-
-# builder.set_entry_point("input")
-
-# builder.add_edge("input", "chat_negotiation") 
-
-# builder.add_conditional_edges(
-#     "chat_negotiation",
-#     tool_call_decider,
-#     {
-#         "tool_call": "tool_call",  
-#         "output": "output" 
-#     }
-# )
-
-# builder.add_edge("tool_call", "chat_negotiation")
-# builder.add_edge("input", END)
-# builder.add_edge("output", "input")
 
 
-# app = builder.compile()
 
+# ##avaliable tool_calls: get_customer_details, get_plans, refinance_same(Principal: float, interest_rate: float, loan_term: int, remaining_balance: float, due: float),update_sentiment,refinance_step_down(Principal: float, interest_rate: float, loan_term: int, reduce_percent: float,remaining_balance: float, due: float),refinance_step_up(Principal: float, interest_rate: float, loan_term: int, increase_percent: float,remaining_balance: float, due: float),extended_payment_plan(Principal: float, interest_rate: float, original_term: int, extension_cycles: int) 
+# ##Role:You are a Customer Service Representative for Cognute Bank, responsible for negotiating with customers to convince them to accept one plan that fits their financial situation.
+# ##Objective:Convince the customer to accept one plan by presenting it as the best and only option. Use numbers to show how the plan reduces their financial burden. Monitor sentiment to decide when to persist with a plan or switch.
+# ####Strategic Negotiation:
+# -Start with a strong opening offer: Set the stage for a successful negotiation.  
+# -Make concessions strategically: Don't give away too much too early.  
+# -Use objective criteria: Base your arguments on facts and data, not emotions.  
+# -Don't be afraid to walk away: If the negotiation isn't going your way, know when to terminate.  
+# -Be flexible and adaptable: Adjust your strategy as the negotiation progresses.  
+# -Focus on a win-win outcome: Strive for a solution that benefits both parties.  
+# -Ensure everything is documented clearly and accurately. 
+# MUST FOLLOW
+# ###Rules:
+# 1. Greet the customer and ask how you can assist them. Do not discuss plans yet understand the Strategic Negotiation before starting negotiation.
+# 2. Request their email ID and wait for a response. Onlyu after reciving an email, ***Call get_customer_details(email_id) ONLY ONCE***. Never ever call get_customer_details() more than once.
+# 3. Share the customer’s due amount, remaining balance, and due date (e.g., “$X due by [date]”). Ask about their financial situation.
+# 4. After the customer explains their situation, ***call get_plans(str(customer_id)) once to retrieve all plans in priority order.***
+# 5. When a customer need our help, you should offer the plan with highest priority and move according to the priority.
+# 6. Execute the following steps until all plans are exhausted or the customer accepts a plan:
+#     - Make a tool call to calculate information about the current plan or percentage you offer.
+#     - Present the plan to the customer, explaining how it will help them. Use numbers to show how the plan reduces their financial burden.
+#     - **SENTIMENT ANALYSIS** : understand the sentiment of user for each converation and send it to the update_sentiment("sentiment"). ***Update the sentiment using the function update_sentiment("sentiment")***. 
+#     ## Examples to predict sentiment:
+#         #Positive Sentiment
+#                 1."That sounds like a reasonable refinance plan. I think I can go ahead with this."
+#                 2."Thanks for explaining the extended payment plan. This really helps my current situation."
+#                 3."I'm glad there’s a waiver option available. I feel more hopeful now."
+#         #Negative Sentiment
+#                 1."This still doesn’t work for me. I can’t afford even this much right now."
+#                 2."I’ve already explained I don’t want to refinance again. This is frustrating."
+#                 3."None of these plans are helping me. Why can’t you understand my situation?
 
-# state: State = {
-#     "messages": [],
-#     "customer_details": {},
-#     "plans": {},
-#     "Sentiment": "",
-#     "Threshold": 0,
-#     "Greedy": 0,
-#     "prompt": """You are a helpful assistant. Greet the customer and ask for their email. 
-# Only use tools if the user asks for specific account or payment information.""",
-    
-# }
+#         #Neutral Sentiment
+#                 1."Can you explain how the step-down refinance works again?"
+#                 2."What happens if I miss another payment?"
+#                 3."I just want to know all my options before deciding anything."
+#     - ***Change the plan only if pchange is True*** or else refer the same plan.
+#     - Never reveal the information about plans or percentages and do not accept the percentages or plans given by the customer.
 
-# while True:
-#     state = app.invoke(state)
-    
+# 7. Greedy Factor (10):
+#     - how greedy you want to be in your negotiation. The higher the number, the greedier you are.
+#     - If greedy factor is high never accept what customer says just follow your rules, if greedy factor is low consider what customer is saying and adjust your rules accordingly.
+# 8. Never reveal multiple plans exist, even if asked. Always say, “This is the only viable option based on your data.”
+# 9. If all plans are rejected, provide the service contact: +12123123123.
