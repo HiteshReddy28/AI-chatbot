@@ -1,0 +1,255 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Roboto&display=swap');
+/* login.css */
+
+/* (Optional) Reset or box-sizing for consistency */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Container for the entire login page */
+  .login-container {
+    display: flex;
+    min-height: 100vh; /* Make it fill the entire browser height */
+    font-family: 'Roboto', sans-serif; /* Default font is Roboto */
+  }
+  
+  /* LEFT SECTION: Gradient background */
+  .left-section {
+    flex: 1;
+    background: linear-gradient(to top, #002768, #004DCE);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    color: #fff;
+  }
+  /* Robot centered in the available space */
+.robot-wrapper {
+  flex: 1; /* Push the text to the bottom */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Robot wrapper + shadow */
+.robot-wrapper {
+  position: relative; /* So the shadow is placed relative to the wrapper */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+
+  /* Robot image styling */
+  .robot-image {
+    width: 400px;
+    height: auto;
+    margin-bottom: 1rem;
+  }
+  
+
+  /* The ellipse shadow */
+.shadow-ellipse {
+  width: 200px;
+  height: 15px;
+  background-color: rgb(0, 0, 0);
+  border-radius: 50%;
+  margin-bottom: 2rem;
+}
+
+/* Ai Negotiator heading & subtitle */
+.left-heading {
+  margin-bottom: 1 rem;
+  font-size: 1.8rem;
+  /* any additional styling (font-family, etc.) */
+}
+
+.left-subtitle {
+  font-size: 1rem;
+  text-align: center;
+  margin-bottom: 1rem;
+  max-width: 500px;  
+  text-align: center;
+  /* ... */
+}
+
+/* The dots container */
+.dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Each dot */
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin: 0 4px;
+  border-radius: 50%;
+  background-color: #fff; /* or any color you like */
+  cursor: pointer;
+  opacity: 0.5; /* partially faded by default */
+  transition: opacity 0.2s ease;
+}
+
+/* Active dot is fully visible */
+.dot.active {
+  opacity: 1;
+}
+  
+  /* RIGHT SECTION: White background for the login form */
+  .right-section {
+    flex: 1;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .brand-title {
+    font-family: 'Roboto', sans-serif; /* Roboto Medium loaded above */
+    font-weight: 500;                 /* Medium is typically 500 */
+    font-size: 64px;                  /* 64px for "Ai Negotiator" */
+    color: #002768;                   /* Dark blue color */
+    text-align: center;
+    display: block;   /* Ensures margin: 0 auto works */
+    margin: 0 auto;   /* Centers the element horizontally */
+    margin-bottom: 2rem;
+    
+                 
+  }
+  
+  .brand-title .brand-dot {
+    color: #FE0000;   /* The dot is red */
+    font-size: 68px;  /* Slightly bigger than text */
+  }
+
+
+
+  
+  /* Bold heading on the right side (Archivo Black) */
+  .right-heading {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 1.8rem;
+    text-align: center;
+    margin-bottom: 0.5rem;
+    color: #000;
+  }
+  
+  /* Sub-heading or descriptive text in Roboto */
+  .right-subtitle {
+    font-size: 1rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: #333;
+  }
+  
+  /* Social login buttons container */
+  .social-login-container {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  /* Style for each social login button */
+  .social-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem; /* space between logo and text */
+    padding: 1rem 10rem;
+    font-size: 1.75rem;
+    font-weight: 500; /* or adjust as needed */
+    color: #000;
+    background-color: #fff;
+    border: none;         /* remove default button border */
+    border-radius: 9999px; /* big radius for pill shape */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* subtle shadow */
+    cursor: pointer;
+    transition: box-shadow 0.2s ease;
+  }
+
+  .social-button:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* slightly bigger shadow on hover */
+  }
+  
+  .social-logo {
+    width: 30px;
+    height: 30px;
+    /* No margin needed; gap handles spacing */
+  }
+
+
+
+
+
+
+  
+  /* 'or continue with email' text */
+  .or-text {
+    text-align: center;
+    margin: 1rem 0;
+    color: #666;
+  }
+  
+  /* The login form itself */
+  .login-form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Label for inputs */
+  .login-label {
+    margin-bottom: 0.3rem;
+    font-size: 0.95rem;
+    color: #333;
+  }
+  
+  /* Input fields with #EDF2F4 background */
+  .login-input {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background-color: #EDF2F4;
+  }
+  
+  /* Checkbox + 'Remember me' and 'Forgot Password' container */
+  .remember-forgot-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  /* 'Remember me' text */
+  .remember-me-label {
+    margin-left: 0.25rem;
+    font-size: 0.9rem;
+    color: #333;
+  }
+  
+  /* 'Forgot Password' link */
+  .forgot-link {
+    font-size: 0.9rem;
+    color: #0B49E0;
+    text-decoration: none;
+  }
+  
+  /* The login button in #FE0000 */
+  .login-button {
+    padding: 0.75rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 4px;
+    background-color: #FE0000;
+    color: #fff;
+    cursor: pointer;
+  }
+  
