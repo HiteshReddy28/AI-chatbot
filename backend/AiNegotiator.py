@@ -849,44 +849,44 @@ def negotiate_loan(request: LoanNegotiationRequest):
 
         messages.append({"role": "user", "content": request.requested_changes})
 
-        from backup import run_negotiate_chain
-        ai_response = run_negotiate_chain(request.requested_changes, client_id)
-        print("Raw AI Response:", ai_response)
+       
+        ai_response = negotiate_with_ai(client_id, request.requested_changes)
+        
         
         if not ai_response or not isinstance(ai_response, str):
             raise HTTPException(status_code=500, detail="AI response is empty or invalid.")
 
-        print("Raw AI Response:", ai_response)
+        
 
-    #     # Ensure the string starts with <response> before XML parsing
-    #     ai_response = ai_response.strip()
-    #     if not ai_response.startswith("<response>"):
-    #         raise HTTPException(status_code=500, detail="AI response did not start with <response> block.")
+        # Ensure the string starts with <response> before XML parsing
+        ai_response = ai_response.strip()
+        if not ai_response.startswith("<response>"):
+            raise HTTPException(status_code=500, detail="AI response did not start with <response> block.")
 
-    #     # Extract the <response> block
-    #     match = re.search(r"<response>.*?</response>", ai_response, re.DOTALL)
-    #     if not match:
-    #         raise HTTPException(status_code=500, detail="AI response did not contain valid <response> XML block.")
+        # Extract the <response> block
+        match = re.search(r"<response>.*?</response>", ai_response, re.DOTALL)
+        if not match:
+            raise HTTPException(status_code=500, detail="AI response did not contain valid <response> XML block.")
 
-    #     xml_response = match.group(0)
+        xml_response = match.group(0)
 
-    #     try:
-    #         root = ET.fromstring(xml_response)
-    #     except ET.ParseError as e:
-    #         raise HTTPException(status_code=500, detail=f"Failed to parse AI XML response: {str(e)}")
+        try:
+            root = ET.fromstring(xml_response)
+        except ET.ParseError as e:
+            raise HTTPException(status_code=500, detail=f"Failed to parse AI XML response: {str(e)}")
 
-    #     customer_node = root.find("customer")
-    #     customer_content = customer_node.text.strip() if customer_node is not None and customer_node.text else xml_response
+        customer_node = root.find("customer")
+        customer_content = customer_node.text.strip() if customer_node is not None and customer_node.text else xml_response
 
-    #     cursor.execute(
-    #         "INSERT INTO chat_history (client_id, sender, message) VALUES (%s, %s, %s)",
-    #         (client_id, "bot", customer_content)
-    #     )
-    #     conn.commit()
+        cursor.execute(
+            "INSERT INTO chat_history (client_id, sender, message) VALUES (%s, %s, %s)",
+            (client_id, "bot", customer_content)
+        )
+        conn.commit()
 
-    #     return {"negotiation_response": customer_content}
+        return {"negotiation_response": customer_content}
 
-        return {"negotiation_response": ai_response}
+        
 
     except Exception as e:
         print(f"Error in /api/negotiate: {str(e)}")

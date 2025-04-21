@@ -281,7 +281,7 @@ def get_client_details(client_id: str):
         """, (int(client_id),))
         
         user = cursor.fetchone()
-        print("DEBUG: User fetched ->", user)
+        #print("DEBUG: User fetched ->", user)
 
         if not user:
             raise HTTPException(status_code=404, detail="Customer not found")
@@ -362,32 +362,95 @@ def get_client_details(client_id: str):
     except Exception as e:
         print(f"ERROR: {str(e)}")  # Log error
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    
 
-@app.get("/api/repurposed_plans/{client_id}")
+plan_name_to_function = {
+    "Refinance Step Same": "refinance_same",
+    "Refinance Step Down": "refinance_step_down",
+    "Refinance Step Up": "refinance_step_up",
+    "Extended Payment Plan": "extended_payment_plan",
+    "Settlement Plan with Waivers": "settlement_plan_with_waivers"
+}
+
 def get_plans(customer_id: str, priority: int):
-    """
-    Retrieves the financial plan for a customer based on priority.
-    """
     cursor.execute("""
-        SELECT plan_number, plan_name, loan_adjustment, extension_cycles, fee_waiver, interest_waiver, principal_waiver, fixed_settlement, description
-        FROM repurposed_plans WHERE client_id = %s AND priority = %s;
+        SELECT plan_number, plan_name, loan_adjustment, extension_cycles,
+               fee_waiver, interest_waiver, principal_waiver,
+               fixed_settlement, description
+        FROM repurposed_plans
+        WHERE client_id = %s AND priority = %s;
     """, (customer_id, priority))
 
     plan = cursor.fetchone()
     if not plan:
         raise HTTPException(status_code=404, detail="No plan found for this customer with the given priority.")
 
+    plan_number, plan_name, loan_adj, ext_cycles, fee_w, int_w, princ_w, fixed_settle, desc = plan
+    func_name = plan_name_to_function.get(plan_name)
+
+    if not func_name:
+        raise HTTPException(status_code=400, detail=f"Unsupported plan name: {plan_name}")
+
+    # Prepare inputs and calculate output
+    if func_name == "refinance_same":
+        inputs = {
+            "loan_amount": float(fixed_settle),
+            "interest_rate": 0.0,
+            "loan_term": 60,
+            "remaining_balance": float(loan_adj)
+        }
+        result = refinance_same(**inputs)
+
+    elif func_name == "refinance_step_down":
+        inputs = {
+            "loan_amount": float(fixed_settle),
+            "interest_rate": 2.5,
+            "loan_term": 60,
+            "reduce_percent": float(loan_adj)
+        }
+        result = refinance_step_down(**inputs)
+
+    elif func_name == "refinance_step_up":
+        inputs = {
+            "loan_amount": float(fixed_settle),
+            "interest_rate": 3.5,
+            "loan_term": 60,
+            "increase_percent": float(loan_adj)
+        }
+        result = refinance_step_up(**inputs)
+
+    elif func_name == "extended_payment_plan":
+        inputs = {
+            "loan_amount": float(fixed_settle),
+            "interest_rate": 2.0,
+            "original_term": 60,
+            "extension_cycles": int(ext_cycles or 6)
+        }
+        result = extended_payment_plan(**inputs)
+
+    elif func_name == "settlement_plan_with_waivers":
+        inputs = {
+            "loan_balance": float(fixed_settle),
+            "fee_waiver_percent": float(fee_w or 0),
+            "interest_waiver_percent": float(int_w or 0),
+            "principal_waiver_percent": float(princ_w or 0),
+            "original_fee": 500.0,  # Replace with real values if stored
+            "original_interest": 800.0  # Replace with real values if stored
+        }
+        result = settlement_plan_with_waivers(**inputs)
+
+    else:
+        raise HTTPException(status_code=500, detail="Unhandled plan type.")
+
+    # Return final tool-compatible structure
     return {
-        "plan_number": plan[0],
-        "plan_name": plan[1],
-        "loan_adjustment": plan[2],
-        "extension_cycles": plan[3],
-        "fee_waiver": plan[4],
-        "interest_waiver": plan[5],
-        "principal_waiver": plan[6],
-        "fixed_settlement": plan[7],
-        "description": plan[8],
+        1: {
+            "function": func_name,
+            "inputs": inputs,
+            "output": result  
+        }
     }
+
 
 from together import Together 
 # Together.ai API Configuration
@@ -873,7 +936,8 @@ def negotiate_loan(request: LoanNegotiationRequest):
         messages.append({"role": "user", "content": request.requested_changes})
 
         # Call AI negotiation
-        ai_response = negotiate_with_ai(client_id, request.requested_changes)
+        from bk import run_negotiate_chain
+        ai_response = run_negotiate_chain(client_id, request.requested_changes)
         
 
         if not ai_response or not isinstance(ai_response, str):
@@ -901,8 +965,8 @@ def negotiate_loan(request: LoanNegotiationRequest):
         customer_content = customer_node.text.strip()
 
         #Output Guardrails
-        if not enforce_output_guardrails(customer_content):
-            raise HTTPException(status_code=500, detail="AI response failed content guardrails.")
+        # if not enforce_output_guardrails(customer_content):
+        #     raise HTTPException(status_code=500, detail="AI response failed content guardrails.")
         
         # Store chat history
         cursor.execute(

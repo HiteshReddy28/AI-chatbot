@@ -5,8 +5,7 @@ from langchain_together import ChatTogether
 import os
 import json
 
-# Import the guardrails config
-from config import guard  # Import the guardrails setup from config.py
+from jpt import enforce_input_guardrails, enforce_output_guardrails
 
 # Import from AiNegotiator
 from Shared import (
@@ -31,7 +30,7 @@ def input_validation_node(state):
     user_msg = state["messages"][-1].content
     
     # Validate user input using Guardrails
-    validation_outcome = guard.validate(user_msg)
+    validation_outcome = enforce_input_guardrails(user_msg)
     if not validation_outcome.valid:
         raise HTTPException(status_code=400, detail=f"Input failed validation: {validation_outcome.error_message}")
     
@@ -95,7 +94,7 @@ def output_validation_node(state):
     ai_msg = state["messages"][-1].content
     
     # Validate AI output using Guardrails 
-    validation_outcome = guard.validate(ai_msg)
+    validation_outcome = enforce_output_guardrails(ai_msg)
     if not validation_outcome.valid:
         raise HTTPException(status_code=500, detail=f"Output failed validation: {validation_outcome.error_message}")
     

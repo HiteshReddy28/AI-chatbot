@@ -22,9 +22,9 @@ fsspec==2025.3.2
 googleapis-common-protos==1.69.2
 griffe==0.36.9
 grpcio==1.71.0
-guardrails-ai==0.6.5
-guardrails-api-client==0.4.0a1
-guardrails_hub_types==0.0.4
+guardrails-ai>=0.6.5
+guardrails-api-client>=0.4.0a1
+guardrails_hub_types>=0.0.4
 h11==0.14.0
 httpcore==1.0.7
 httpx==0.28.1
@@ -54,7 +54,6 @@ MarkupSafe==3.0.2
 mdurl==0.1.2
 multidict==6.3.2
 numpy==2.2.4
-openai==1.70.0
 opentelemetry-api==1.31.1
 opentelemetry-exporter-otlp-proto-common==1.31.1
 opentelemetry-exporter-otlp-proto-grpc==1.31.1
