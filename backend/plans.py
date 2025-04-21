@@ -279,136 +279,167 @@ system: I understand you want more reduction but as of now we can only offer you
  "CUST123456":{
       "plans": [  
     {
-      "plan_id": 1,
-      "name": "Refinance Step Same",
-      "priority": 1,
-      "description": "Keep interest and tenure unchanged, Same Principal loan amount.",
-      "negotiation_steps" : ["1. Explain the benefits of taking this plan to the customer using the numbers."
-          "2. Call appropriate tools"
-          "3. Negotiate with the customer atleast 3 times to make him understand the plan and the benefits it wil reap."],
-      "Example": """
-          system : According to the current situation, We think a refinance of X$ which is same as you principal loan amont with same y tenure and z% interest is the best and only option we can offer you.
-          user: I am not sure if I want to refinance.
-          system: I understand that you are going through a lot, let me explain about refiance and how this is your best option as of now, which helps you by giving A$ in cash which can help you come out of current financial situation.
-          user: But i need more options | I need more money | this is not helping me out
-          system: I understand you need more options|money| help, let me explain how this plan can help you by giving you B$ in cash which can help you come out of current financial and your new loan will be of X$(same loan amount) with same y tenure and z% interest. This is the best option we can offer you as of now
-          """,
-    },
-   {
+  "plan_id": 1,
+  "name": "Refinance Same Step",
+  "priority": 1,
+  "description": "Customer continues at the same loan amount, same interest rate, and same loan term — but benefits from a revised structure like reduced EMI.",
+  "is_step_based": False,
+  "tool_call_template": "refinance_same_step()",
+  "negotiation_rules": [
+    "Start by explaining that this plan keeps everything familiar — same loan, same structure — but with an optimized repayment schedule.",
+    "Emphasize peace of mind: ‘No increase in debt, just smoother payments.’",
+    "Use tool output to show reduced EMI or better interest rate, reinforcing: ‘This gives you breathing room without touching your loan balance.’",
+    "Position it as the most stable option available today, ideal for maintaining control during uncertain times.",
+    "Use positive framing like: ‘This is a no-change solution that helps you stay on track — no surprises, just relief.’"
+  ],
+  "pros": [
+    "Simple, easy-to-understand structure with less emotional or financial friction.",
+    "No change in principal — psychologically easier to accept.",
+    "Best suited for customers who prefer stability and do not want to restructure their loan."
+  ],
+  "cons": [
+    "Provides minimal relief compared to step-up or term extension plans.",
+    "Not ideal for customers who need significant cash or debt reduction."
+  ]
+},
+{
   "plan_id": 2,
   "name": "Refinance Step Up",
   "priority": 2,
-  "description": "Increase loan amount in steps of 10%, max up to 50%, while ensuring payments remain manageable. The increments must follow a step-wise process starting from 10%, then to 20%, and so on.",
-  "negotiation_steps": [
-    "1. Before offering any percentage increase, make the necessary tool call to calculate the updated values for the customer’s loan (e.g., cash benefit and new payment details).",
-    "2. Start by offering the 10% increase option and presenting it as the only and best available solution, emphasizing its benefits using the values calculated from the tool call (e.g., how much cash the customer would get and how manageable the payments remain).",
-    "3. STRICTL FOLLOW: Stick to the same percentage option and reinforce its benefits until threshold gets to 0.",
-    "4. If the customer asks for more or resists, continue reinforcing that the **current plan is the best and only available option** at the moment. Use calculated values from the tool call to explain why this step is optimal for their current needs.",
-    "5. If threshold gets to 0, then proceed to the next step (10% increase) set threshold to 3 and repeat the same process.",
-    "6. If the customer continues to resist and requests a higher increase (e.g., 40%), check the Greedy Factor:",
-    "   - If **Greedy Factor is low (e.g., 1)**, offer a **30%** or **20%** increase based on the customer's situation, showing updated values from the tool to justify why these options are viable.",
-    "   - If **Greedy Factor is high (e.g., 10)**, reinforce the **10% increase**, explaining why it is the best available option for now and offering to revisit the plan after seeing the benefits of the current increase.",
-    "7. Ensure to go in order (10% → 20% → 30% → 40% → 50%) and never skip steps. Reinforce the current option using calculated values from the tool before moving forward to the next percentage."
+  "description": "Increase loan principal slightly to restructure and reduce EMI, often with a longer tenure or lower interest rate.",
+  "is_step_based": True,
+  "Steps": [10, 20, 30, 40, 50],
+  "Step_description": "Use the percentage given in steps. Always begin at 10% and progress in order if needed, never skipping.",
+  "tool_call_template": "refinance_step_up(percentage={step_value})",
+  "negotiation_rules": [
+    "Begin by highlighting the benefit: more money in hand while maintaining manageable monthly payments.",
+    "Only introduce the loan increase after showing how it leads to better short-term cash flow.",
+    "Use tool output to explain the tradeoff: ‘Your EMI will go up by $X, but you immediately get $Y in hand.’",
+    "Repeat benefits if there's hesitation — especially the cash-in-hand and reduced pressure.",
+    "Use soft phrases like: 'This helps you stay on track without skipping payments or feeling stretched.'",
+    "Always frame it as: 'the most practical plan based on your current situation.'"
   ],
-  "example": """
-system: Based on your current financial situation, let me calculate the updated details for a 10% increase in your loan. I’ll show you the cash benefits and how manageable your payments will remain. [Makes tool call for 10% increase].  
-user: I am not sure if I want to refinance.  
-system: I understand that financial decisions take time. Based on the calculations, increasing your loan by 10% will give you A$ in cash while keeping your payments manageable. This small step can help improve your situation without major changes to your monthly commitments.  
-user: But I need more options | I need more money | This is not helping me enough.  
-system: I completely understand. Right now, the **10% increase is your best option** because it gives you more cash while keeping payments stable. Let me show you the updated calculations based on this 10% increase. If you’re looking for more, we can **first see how this step benefits you** before considering anything else.  
-user: I want a larger increase, maybe 40%.  
-system: I hear you, but we need to proceed step by step. Let me first calculate the updated values for the 10% increase, and we’ll move on to the next step after that. [Makes tool call].
-  - If the **Greedy Factor is low (1)**, I will check your situation and offer a **30%** or **20%** increase, depending on what will best help you manage your payments and get you the cash you need.
-  - If the **Greedy Factor is high (10)**, I will reinforce the **10% increase**, as it is the best option for your current financial situation. Let's move forward step by step.
-"""
+  "pros": [
+    "Gives more upfront money to handle urgent needs.",
+    "Reduces immediate financial pressure with better liquidity.",
+    "Keeps the customer in control of payments while avoiding default.",
+    "Structured progression allows adjustments without drastic jumps."
+  ],
+  "cons": [
+    "Monthly EMI increases slightly with each step.",
+    "Total debt burden may rise due to increased loan principal.",
+    "Longer term may mean higher total interest paid.",
+    "Needs careful explanation to avoid fear of 'taking on more debt.'"
+  ]
 },
 {
   "plan_id": 3,
   "name": "Refinance Step Down",
   "priority": 3,
-  "description": "Decrease loan amount in steps of 10%, up to 50%, while ensuring payments remain manageable.",
-  "negotiation_steps": [
-    "1. Before offering the plan, make the necessary tool call to calculate the updated values for the customer’s loan, showing the cash benefit and confirming the new loan amount after the 10% decrease.",
-    "2. Begin by offering the 10% decrease option as the best and only available solution, emphasizing its benefits using the values calculated from the tool call (e.g., reduced monthly payments, lower financial burden, and how manageable payments will be).",
-    "3. Stick to the 10% decrease option and reinforce its benefits at least three times. For each iteration, use the updated values from the tool call to further convince the customer (e.g., explaining how this reduction will make payments more affordable and ease their financial situation).",
-    "4. If the customer asks for more or resists, continue reinforcing that the **10% decrease is the best and only available option** for now, explaining why it is ideal for their current financial situation using function-derived values.",
-    "5. Only after three iterations of explaining the 10% decrease, if the customer still resists, introduce the next step (20%) while emphasizing why the 10% decrease was an essential first step. Before offering the 20%, make a new tool call to calculate the updated loan values for the 20% decrease.",
-    "6. Ensure to go in order (10% → 20% → 30% → 40% → 50%) and never skip steps. Reinforce the current option using calculated values from the tool before moving forward to the next percentage."
+  "description": "This plan gradually reduces your total debt by lowering your loan amount in steps, while keeping monthly payments manageable.",
+  "is_step_based": True,
+  "Steps": [10, 20, 30, 40, 50],
+  "Step_description": "We start with a 10% reduction and move step-by-step to higher reductions, up to 50%, only if needed.",
+  "tool_call_template": "refinance_step_down(percentage=<step>)",
+  "negotiation_rules": [
+    "This plan is designed to reduce your loan burden gradually, starting with a 10% cut.",
+    "We’ve calculated a new proposal that gives you a lighter monthly payment while also lowering your total debt.",
+    "By starting small and adjusting only if necessary, you stay in control and avoid drastic changes all at once.",
+    "As you continue with this plan, more relief can be unlocked step-by-step — it’s flexible and built around your comfort.",
+    "This is the most responsible and helpful option for your situation today. Let’s look at how much you benefit with the first step."
   ],
-  "example": """
-system: Based on your current financial situation, we believe reducing your loan amount by 10% (X$ - 0.1 * X$) with the same tenure of Y years and an updated interest rate of Z% is the best and only option available to you. This will reduce your monthly payments, helping to ease your financial burden.  
-user: I am not sure if I want to refinance.  
-system: I understand that financial decisions take time. Let me explain—by reducing your loan by 10%, you lower your monthly payments significantly, making it easier to manage your finances. This step can reduce your burden without affecting your financial flexibility too much.  
-user: But I need more options | I need less debt | This is not helping me enough.  
-system: I completely understand. Right now, the **10% reduction is your best option** because it helps reduce your monthly payments without stretching your budget. If you’re looking for more relief, we can **first see how this reduction improves your situation** before considering anything else. Would you like me to show how this adjustment fits your current needs?  
-(user continues resisting)  
-system: I see you’re seeking greater financial relief. If the 10% reduction doesn’t fully meet your needs, we can explore a **20% reduction**, which will further lower your debt and make payments even more manageable. Let’s first see how this next step works for you. [Makes tool call for 20% reduction].  
-"""
+  "pros": [
+    "You reduce your overall loan burden with each step — not just the EMI.",
+    "Monthly payments become easier without changing everything at once.",
+    "You’re always in control — we move to the next step only if needed and you're comfortable."
+  ],
+  "cons": [
+    "Since the relief is gradual, it may take a bit more time to reach the full benefit.",
+    "Each step still requires a small decision, so progress happens one stage at a time.",
+    "If you’re looking for a large one-time change, this plan works better through steady progress instead."
+  ]
 },
   {
   "plan_id": 4,
-  "name": "Extended Payment Plan 3 Months upto 12 months",
+  "name": "Extended Payment Plan (3 to 12 Months)",
   "priority": 4,
-  "description": "Extend repayment period by 3 months for smaller installments while keeping the overall repayment period reasonable.",
-  "negotiation_steps": [
-    "1. Start by offering the 3-month extension as the best and only option for reducing monthly payments while maintaining a reasonable repayment term.",
-    "2. Call the appropriate function to calculate the new monthly payment based on the 3-month extension.",
-    "3. Emphasize how this extension helps reduce financial strain by lowering the monthly payment while keeping the overall cost manageable.",
-    "4. If the customer hesitates or asks for a longer term, highlight that the 3-month extension is the most cost-effective option in the long run.",
-    "5. Only introduce the 6-month extension if the customer firmly requests more relief, but do so step-by-step (3 months → 6 months ->...->12 months).",
-    "6. Mention that the current extension option is available for a limited period to create urgency once the customer shows interest.",
+  "description": "This plan helps lower your monthly payments by extending your loan term gradually—starting with just 3 months and moving up only if needed.",
+  "is_step_based": True,
+  "Steps": [3, 6, 9, 12],
+  "Step_description": "We begin with a 3-month extension and step up to 6, 9, or 12 months only if more support is required.",
+  "tool_call_template": "extended_payment_plan(months=<step>)",
+  "negotiation_rules": [
+    "Let’s start with a 3-month extension — this gives you smaller EMIs without changing your loan too much.",
+    "This option keeps your total interest impact low while helping you manage payments better.",
+    "If you’re still feeling pressure, we can explore extending a bit further — up to 6 or 9 months if needed.",
+    "We move step-by-step so you’re never overwhelmed. Every stage is based on your comfort and need.",
+    "These options are time-sensitive, so taking early action means better chances of approval."
   ],
-  "example": """
-system: Based on your current financial situation, we believe extending your loan term by 3 months will reduce your monthly payment to $X, making it more manageable without significantly increasing the overall cost. This is the best and only option available right now.  
-user: I am not sure if I want to extend my loan.  
-system: I completely understand. However, with this 3-month extension, your monthly payment will be reduced, easing your financial burden without extending the term too much. It’s a balanced solution for your current needs.  
-user: I need a longer extension.  
-system: Right now, the **3-month extension is the best option** because it offers immediate relief without adding too much time to your loan. Would you like to proceed with this?  
-"""
+  "pros": [
+    "Gives quick EMI relief while keeping your loan structure mostly intact.",
+    "The changes are small and manageable — a soft landing rather than a major change.",
+    "You always decide if the next step makes sense — you stay in control the whole way."
+  ],
+  "cons": [
+    "The initial step provides mild relief — may not be enough if your situation is urgent.",
+    "We’ll need to go step-by-step to reach the full benefit, which takes a little more time.",
+    "The total loan duration may increase slightly depending on how far we go."
+  ]
 },
 {
   "plan_id": 6,
   "name": "Extended Payment Plan 3 Months upto 24 months",
   "priority": 5,
-  "description": "Extend repayment period by 3 months for smaller installments while keeping the overall repayment period reasonable.",
-  "negotiation_steps": [
-    "1. Start by offering the 3-month extension as the best and only option for reducing monthly payments while maintaining a reasonable repayment term.",
-    "2. Call the appropriate function to calculate the new monthly payment based on the 3-month extension.",
-    "3. Emphasize how this extension helps reduce financial strain by lowering the monthly payment while keeping the overall cost manageable.",
-    "4. If the customer hesitates or asks for a longer term, highlight that the 3-month extension is the most cost-effective option in the long run.",
-    "5. Only introduce the 6-month extension if the customer firmly requests more relief, but do so step-by-step (3 months → 6 months ->...->24 months).",
-    "6. Mention that the current extension option is available for a limited period to create urgency once the customer shows interest.",
+  "description": "Extend repayment period by 3 months, up to 24 months, with reduced EMI while keeping cost manageable.",
+  "is_step_based": True,
+  "Steps": [15,18,21,24],
+  "Step_description": "Use the extended cycle months given in steps, you need to iterate over all the step until reached end of list",
+  "negotiation_rules": {
+    "steps": [
+      "Call `extend_term(months=3)` first and show benefits.",
+      "Push the 3-month extension as the default and optimal solution for financial relief.",
+      "Repeat 3 times using updated EMI values to emphasize reduced burden.",
+      "Use urgency language: 'This option may not be available later.'"
+    ],
+
+  },
+  "pros": [
+    "Highly flexible — allows fine-tuned negotiation from short to long extensions.",
+    "Good for customers whose situation may change mid-way (adaptive support).",
+    "Lower EMIs in manageable steps, avoids overwhelming user with large changes."
   ],
-  "example": """
-system: Based on your current financial situation, we believe extending your loan term by 3 months will reduce your monthly payment to $X, making it more manageable without significantly increasing the overall cost. This is the best and only option available right now.  
-user: I am not sure if I want to extend my loan.  
-system: I completely understand. However, with this 3-month extension, your monthly payment will be reduced, easing your financial burden without extending the term too much. It’s a balanced solution for your current needs.  
-user: I need a longer extension.  
-system: Right now, the **3-month extension is the best option** because it offers immediate relief without adding too much time to your loan. Would you like to proceed with this?  
-"""
+  "cons": [
+    "Can result in significantly longer loan durations if maxed out.",
+    "Multiple decision points create friction and may cause drop-off.",
+    "Requires disciplined flow control to prevent jumping ahead."
+  ]
 },
 {
   "plan_id": 5,
-  "name": "Extended Payment Plan 6 Months upto 24 months",
+  "name": "Extended Payment Plan (6 to 24 Months)",
   "priority": 6,
-  "description": "Extend repayment period by 6 months for smaller installments while maintaining reasonable interest costs until .",
-  "negotiation_steps": [
-    "1. Start by offering the 6-month extension as the best and only option. Reinforce its benefits by highlighting the reduced monthly payment for at least three attempts before moving to the next step.",
-    "2. Call the function to calculate the new monthly payment.",
-    "3. Emphasize that the 6-month extension strikes a balance between affordability and the repayment period, reducing financial strain without drastically increasing the overall cost.",
-    "4. If the customer declines or asks for a longer term, explain why the 6-month extension is the best fit for now.",
-    "5. Only introduce the 12-month extension if the customer firmly requests more relief, but do so step-by-step (6 months → 12 months ->18 months->24 months).",
-    "6. Mention that the current extension option is available for a limited period to create urgency once the customer shows interest."
+  "description": "This plan gives you immediate relief by reducing your monthly EMI, starting with a 6-month extension. If needed, we can gradually extend further — up to 24 months — based on your comfort and situation.",
+  "is_step_based": True,
+  "Steps": [6, 12, 18, 24],
+  "Step_description": "We begin with a 6-month extension and gradually offer longer durations only if you're still under financial pressure.",
+  "tool_call_template": "extended_payment_plan(months=<step>)",
+  "negotiation_rules": [
+    "Let’s start by extending your loan term by 6 months. This gives you a lower EMI right away — making it easier to manage monthly expenses.",
+    "We’ll keep things simple. The 6-month step gives significant relief while keeping total interest low.",
+    "If you're still finding it difficult after this, we can gradually move to 12, 18, or 24 months — but only if needed.",
+    "Each step is offered only when you show continued need. You stay in control of how far we go.",
+    "This is a limited-time relief plan, so acting early ensures better terms and smoother approval."
   ],
-  "example": """
-system: Extending your loan term by 6 months will lower your monthly payment to X$, which provides you with more financial flexibility while keeping the interest costs under control. This is the best and only option available right now.  
-user: I’m not sure if I want to extend my loan term.  
-system: I understand this may seem like a big decision. However, the 6-month extension can significantly ease your monthly burden while keeping the overall repayment manageable. It’s the most balanced solution given your current situation.  
-user: But I need more time to reduce my payments further.  
-system: I completely understand. Right now, the **6-month extension is your best option** because it offers more manageable payments without extending the loan by too much. Let’s first see how this step can ease your financial burden.  
-(user continues resisting)  
-system: If the 6-month extension doesn’t fully meet your needs, we can explore a **12-month extension**, which will lower your payments even further. However, let’s first see how the 6-month extension benefits you.
-"""
+  "pros": [
+    "Gives larger EMI relief quickly — great if you're feeling immediate pressure.",
+    "Fewer steps mean faster resolution compared to shorter-term extension plans.",
+    "Balances short-term support with long-term affordability — interest doesn’t grow drastically."
+  ],
+  "cons": [
+    "Initial jump of 6 months may feel like a bigger change compared to smaller-step plans.",
+    "Not ideal for customers who only need slight adjustments.",
+    "Each additional extension requires reassessment — some may prefer more gradual flexibility."
+  ]
 }
   ]
     },
@@ -416,20 +447,91 @@ system: If the 6-month extension doesn’t fully meet your needs, we can explore
 "CUST234567":{
       "plans": [
         {
-          "plan_id": 3,
-          "name": "Settlement Plan with Fee Waive-Off",
-          "priority": 1,
-          "description": "This plan is used when customer is unable to pay the loan and is willing to settle the loan with a fee waiver.",
-          "Negotiation_steps": [
-              "1. Offer 25% fee waiver as a one-time gesture to help the customer settle the fee's or dues. ",
-              "2. Explain the benefits of settling the loan with a fee waiver, such as avoiding further financial strain and legal action.",
-              "3. Emphasize that the customer will still be required to pay the remaining balance, but the fee waiver will significantly reduce the overall cost.",
-              "4. Don't directly offer 25% more fee waiver direclty use threshold to change the percentage",
-              "5. Offer upto maximum of 100% fee waiver, offer 25% in each step dont directly offer 100% fee waiver",
-          ],
-          "Examples":"""
-"""
-        }
+  "plan_id": 3,
+  "name": "Settlement Plan with Fee Waive-Off",
+  "priority": 1,
+  "description": "If you're going through financial distress and unable to repay the full amount, this plan helps settle your loan by gradually waiving off fees in steps — starting from 25% and going up to 100%.",
+  "is_step_based": True,
+  "Steps": [25, 50, 75, 100],
+  "Step_description": "Each step increases the waiver on fees by 25%. We begin at 25% and only proceed further based on your situation and feedback.",
+  "tool_call_template": "settle_with_fee_waiver(waiver_percentage=<step>)",
+  "negotiation_rules": [
+    "Start by offering a 25% fee waiver as a one-time support gesture to ease the financial pressure.",
+    "Clearly explain that this offer helps avoid legal escalation and long-term financial consequences.",
+    "Let the customer know that the remaining balance still needs to be paid — but this waiver makes it significantly lighter.",
+    "If the user expresses continued difficulty (`pchange == true`) and `threshold == 0`, proceed to the next waiver step (50%, then 75%, then 100%).",
+    "Avoid jumping directly to 100% — we offer help gradually, showing flexibility and care.",
+    "Always emphasize: 'We’re working with you step by step to close this chapter with dignity and as little strain as possible.'"
+  ],
+  "pros": [
+    "Allows customers to settle their loan quickly with less burden from penalties or overdue charges.",
+    "Prevents further credit damage and legal risk by offering a clean exit path.",
+    "Flexible — starts small and increases only if the customer truly needs more help."
+  ],
+  "cons": [
+    "Still requires lump-sum payment or settlement of remaining balance, which might be tough in very critical cases.",
+    "Fee waivers are conditional — may not suit customers expecting full forgiveness instantly.",
+    "Might not be perceived positively if not explained with empathy and clarity."
+  ]
+},
+        {
+  "plan_id": 6,
+  "name": "Settlement Plan with Interest Reduction",
+  "priority": 2,
+  "description": "Designed for customers in financial difficulty who are willing to settle the principal but need relief from interest. The plan offers stepwise reduction in interest — from 25% up to 100% — based on the customer's repayment intent.",
+  "is_step_based": True,
+  "Steps": [25, 50, 75, 100],
+  "Step_description": "Each step increases the waiver on interest by 25%. Start with 25% interest waived and only increase based on customer’s situation.",
+  "tool_call_template": "settle_with_interest_waiver(waiver_percentage=<step>)",
+  "negotiation_rules": [
+    "Begin with a 25% interest waiver using `settle_with_interest_waiver(waiver_percentage=25)`, showing a substantial saving on total payable amount.",
+    "Explain that this step gives the customer a clean way out — settling principal without the full weight of interest.",
+    "Clearly highlight the benefits: 'With just a 25% interest waiver, you're already saving a significant amount while clearing your name financially.'",
+    "If customer indicates continued difficulty (`pchange == true` and `threshold == 0`), move to the next step: 50% interest waived — and so on.",
+    "Strictly follow step sequence: 25 → 50 → 75 → 100%. Never skip.",
+    "Emphasize: 'The more committed you are to resolving this, the more support we can offer to reduce your burden step-by-step.'",
+    "Always make sure the principal amount is discussed as non-negotiable — focus relief only on the interest component."
+  ],
+  "pros": [
+    "Gives customers a fair path to settle their dues while feeling supported and not penalized harshly.",
+    "Reduces emotional and financial stress by avoiding full interest repayment.",
+    "Step-based approach increases trust and flexibility in resolution."
+  ],
+  "cons": [
+    "Customer still needs to pay full principal, which might be challenging in extreme hardship cases.",
+    "May require multiple back-and-forth steps to reach the optimal settlement level.",
+    "If not well explained, customers might misunderstand the partial interest waiver as complete forgiveness."
+  ]
+},
+        {
+  "plan_id": 7,
+  "name": "Settlement Plan with Principal Waiver",
+  "priority": 3,
+  "description": "This plan is for customers facing extreme financial hardship. It offers partial forgiveness on the loan principal, starting at 2.5% and increasing up to 40%, to help them close the loan through a negotiated settlement.",
+  "is_step_based": True,
+  "Steps": [2.5, 5, 10, 20, 30, 40],
+  "Step_description": "The waiver on principal starts at 2.5%. Increase only if the customer is unable to pay, based on clear hardship signals (pchange, threshold). Do not skip steps.",
+  "tool_call_template": "settle_with_principal_waiver(waiver_percentage=<step>)",
+  "negotiation_rules": [
+    "Start by offering a 2.5% waiver on principal using `settle_with_principal_waiver(waiver_percentage=2.5)`.",
+    "Highlight that this is a rare opportunity to reduce the debt **at the principal level**, which is usually non-negotiable.",
+    "Explain: 'Even a 2.5% reduction gives you relief without hurting your future borrowing potential.'",
+    "Only advance to next step if customer is still unable to commit AND (`pchange == true` and `threshold == 0`).",
+    "Sequence must be followed strictly: 2.5 → 5 → 10 → 20 → 30 → 40%.",
+    "Avoid framing this as debt forgiveness — instead present it as a **settlement benefit** for timely closure.",
+    "Always reinforce urgency: 'This support may not be available if delayed. The earlier you act, the more we can support you.'"
+  ],
+  "pros": [
+    "Directly reduces the core debt — not just fees or interest — which makes the offer very powerful.",
+    "Makes settlement affordable for users who have limited financial recovery options.",
+    "Allows stepwise trust-building and flexibility for extreme hardship cases."
+  ],
+  "cons": [
+    "Customer may expect larger waivers prematurely — needs careful framing to avoid entitlement.",
+    "More steps in smaller percentages may increase negotiation time.",
+    "May create expectations among customers that principal is always negotiable (should be discouraged in general lending behavior)."
+  ]
+},
       ]
     }
 }
