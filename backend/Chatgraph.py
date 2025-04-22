@@ -442,11 +442,13 @@ Current Coversation:{summary_text}
 
 def output_node(state: State) -> State:
     if state["violated"]:
+        state["violated"] = False
         prompt = f"based on the warning make the output\n warning:{state["warning"]} \n lastmessage: {state["messages"][-1]}"
 
     else:
         last_msg = state["messages"][-1]
         last_response = last_msg["content"]
+        state["messages"].pop()
         print(f"LLM with tools: {last_response}")
         if not last_response:
             print(" Assistant response was empty. Skipping rewrite.")
@@ -469,6 +471,10 @@ def output_node(state: State) -> State:
     improved = llm2.invoke(prompt)
     state["total_tokens"]+=improved.response_metadata["token_usage"]["total_tokens"]
     improved = improved.content
+    state["messages"].append({
+        "role": "assistant",
+        "content": improved
+    })
     state["violated"], state["warning"] = enforce_output_guardrails(improved)
 
     return state
