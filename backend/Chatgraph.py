@@ -466,10 +466,10 @@ def output_node(state: State) -> State:
 
     Structure the output based on the information given.
     """
-        improved = llm2.invoke(prompt)
-        state["total_tokens"]+=improved.response_metadata["token_usage"]["total_tokens"]
-        improved = improved.content
-        state["violated"], state["warning"] = enforce_output_guardrails(improved)
+    improved = llm2.invoke(prompt)
+    state["total_tokens"]+=improved.response_metadata["token_usage"]["total_tokens"]
+    improved = improved.content
+    state["violated"], state["warning"] = enforce_output_guardrails(improved)
 
     return state
 
