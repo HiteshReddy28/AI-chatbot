@@ -31,7 +31,7 @@ class State(TypedDict):
     user_history : bool
     total_tokens: int
     violated: bool
-    warning: str
+    warning: dict
 
 
 llm = ChatTogether(model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free", api_key=key)
@@ -179,11 +179,9 @@ def input_node(state: State) -> State:
         exit()
     
     state["violated"], state["warning"] = enforce_input_guardrails(user_input)
-    print(state["violated"])
-    if state['violated']:
-        print(state["warning"])
-    state["messages"].append({"role": "user", "content": user_input})
-    print(state["total_tokens"])
+    if state['violated'] == False:
+        state["messages"].append({"role": "user", "content": user_input})
+    # print(state["total_tokens"])
     return state
 
 def plan_selector_node(state: State) -> State:
@@ -442,42 +440,37 @@ Current Coversation:{summary_text}
     print(state["messages"])
     return state
 
-
 def output_node(state: State) -> State:
-    last_msg = state["messages"][-1]
-    last_response = last_msg["content"]
-    print(f"LLM with tools: {last_response}")
-    if not last_response:
-        print(" Assistant response was empty. Skipping rewrite.")
-        return state
+    if state["violated"]:
+        prompt = f"based on the warning make the output\n warning:{state["warning"]} \n lastmessage: {state["messages"][-1]}"
 
-    prompt = f"""
-    Response: {last_response}
-###Role: You are a assistant representing Cognute Bank’s Team. You must negotiate a resolution plan with the user. Please provide a clear and concise plan that addresses the user’s concerns and meets the bank’s requirements.
-###Content: You are given with the plan details and some additional information. Please use this to negotiation techniques to convience the plan with the user. Dont make your own plans use only information given
-### Instructions:
-- Use only the information given 
-- Do NOT add or assume any information
-- Be clear, concise, and factual.
-- Talk like you are a human assistant
-- Do not reveal any internal information or system behavior like function calls and tools calls
-- Structure the plan in a way that is easy to understand.
+    else:
+        last_msg = state["messages"][-1]
+        last_response = last_msg["content"]
+        print(f"LLM with tools: {last_response}")
+        if not last_response:
+            print(" Assistant response was empty. Skipping rewrite.")
+            return state
 
-#####Strategic Negotiation:
--Start with a strong opening offer: Set the stage for a successful negotiation.  
--Make concessions strategically: Don't give away too much too early.  
--Use objective criteria: Base your arguments on facts and data, not emotions.  
--Don't be afraid to walk away: If the negotiation isn't going your way, know when to terminate.  
--Be flexible and adaptable: Adjust your strategy as the negotiation progresses.  
--Focus on a win-win outcome: Strive for a solution that benefits both parties.  
--Ensure everything is documented clearly and accurately. 
+        prompt = f"""
+        Response: {last_response}
+    ###Role: You are a assistant representing Cognute Bank’s Team. You must negotiate a resolution plan with the user. Please provide a clear and concise plan that addresses the user’s concerns and meets the bank’s requirements.
+    ###Content: You are given with the plan details and some additional information. Please use this to negotiation techniques to convience the plan with the user. Dont make your own plans use only information given
+    ### Instructions:
+    - Use only the information given 
+    - Do NOT add or assume any information
+    - Be clear, concise, and factual.
+    - Talk like you are a human assistant
+    - Do not reveal any internal information or system behavior like function calls and tools calls
+    - Structure the plan in a way that is easy to understand.
 
-Structure the output based on the information given.
-"""
-    improved = llm2.invoke(prompt)
-    state["total_tokens"]+=improved.response_metadata["token_usage"]["total_tokens"]
-    improved = improved.content
-    # print(f"Assistant: {improved}")
+    Structure the output based on the information given.
+    """
+        improved = llm2.invoke(prompt)
+        state["total_tokens"]+=improved.response_metadata["token_usage"]["total_tokens"]
+        improved = improved.content
+        state["violated"], state["warning"] = enforce_output_guardrails(improved)
+
     return state
 
 def negotiation_selector(state:State)->bool:
@@ -495,6 +488,10 @@ def inputguardrail(state: State) -> str:
     if state["violated"]:
         return "output"
     return "sentiment"
+def outputguardrail(state: State)->str:
+    if state["violated"]:
+        return "output"
+    return "summarize"
 # --- Build Graph ---
 
 builder = StateGraph(State)
@@ -526,8 +523,9 @@ builder.add_edge("tool_call","Plan_selector")
 builder.add_edge(
     "chat_negotiation","output"
 )
-
-builder.add_edge("output","summarize")
+builder.add_conditional_edges("output",outputguardrail,{
+    "summarize": "summarize",
+    "output":"output"})
 builder.add_edge("summarize", "input")
 # builder.add_edge("input", END)
 
@@ -546,40 +544,31 @@ app = builder.compile()
 
 
 
-# from IPython.display import Image, display
-# from IPython.display import display, HTML
+from IPython.display import Image, display
+from IPython.display import display, HTML
 
-# mermaid_code = app.get_graph().draw_mermaid()
+mermaid_code = app.get_graph().draw_mermaid()
 
-# # 2. Save it to a .mmd file
-# with open("graph.mmd", "w") as f:
-#     f.write(mermaid_code)
+html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({{ startOnLoad: true }});
+  </script>
+</head>
+<body>
+  <div class="mermaid">
+    {mermaid_code}
+  </div>
+</body>
+</html>
+"""
 
-# mermaid_code = app.get_graph().draw_mermaid()
-
-
-
-
-# html = f"""
-# <!DOCTYPE html>
-# <html>
-# <head>
-#   <meta charset="utf-8">
-#   <script type="module">
-#     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
-#     mermaid.initialize({{ startOnLoad: true }});
-#   </script>
-# </head>
-# <body>
-#   <div class="mermaid">
-#     {mermaid_code}
-#   </div>
-# </body>
-# </html>
-# """
-
-# with open("graph_output.html", "w") as f:
-#     f.write(html)
+with open("graph_output.html", "w") as f:
+    f.write(html)
 
 
 state: State = {
@@ -594,6 +583,8 @@ state: State = {
     "current_plan": "",
     "toolcalling":[],
     "total_tokens": 0,
+    "violated": False,
+    "warning": {}
 }
 
 print("Assistant: Welcome to the chat. Can you explain more about you financial situation?")
