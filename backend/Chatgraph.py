@@ -13,7 +13,7 @@ from calculation import (
     refinance_same, refinance_step_down, refinance_step_up,
     extended_payment_plan, settlement_plan_with_waivers
 )
-
+from rails import enforce_input_guardrails, enforce_output_guardrails
 
 load_dotenv()
 key = os.getenv("TOGETHER_API_KEY")
@@ -30,6 +30,8 @@ class State(TypedDict):
     toolcalling: list
     user_history : bool
     total_tokens: int
+    violated: bool
+    warning: str
 
 
 llm = ChatTogether(model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free", api_key=key)
@@ -170,15 +172,16 @@ llm_with_tools = llm.bind_tools(list(tool_mapping.values()))
 def input_node(state: State) -> State:
     state["messages"].append({"role":"assistant", "content": "Hi, how can I assist you today?"})
     user_input = input("User: ")
+    
+
     if user_input.lower() in ["exit", "quit", "bye", "goodbye"]:
         print("👋 Thanks for chatting! Have a great day.")
         exit()
-    # guarded_input = guard.validate()
-    # print(guarded_input)
-    # if(state["user_history"]):
-    #     state["Threshold"] = 4
-    # else:
-    #     state["Threshold"] = 3
+    
+    state["violated"], state["warning"] = enforce_input_guardrails(user_input)
+    print(state["violated"])
+    if state['violated']:
+        print(state["warning"])
     state["messages"].append({"role": "user", "content": user_input})
     print(state["total_tokens"])
     return state
@@ -487,6 +490,11 @@ def tool_call_decider(state: State) -> str:
         return "tool_call"
     else:
         return "chat_negotiation"
+    
+def inputguardrail(state: State) -> str:
+    if state["violated"]:
+        return "output"
+    return "sentiment"
 # --- Build Graph ---
 
 builder = StateGraph(State)
@@ -500,7 +508,11 @@ builder.add_node("Plan_selector", plan_selector_node)
 
 # builder.add_node("plan_sector",plan_selector)
 builder.set_entry_point("input")
-builder.add_edge("input", "sentiment")
+builder.add_conditional_edges("input",
+                             inputguardrail,{
+                                 "output": "output",
+                                 "sentiment":"sentiment",
+                             })
 builder.add_conditional_edges("sentiment",
                              negotiation_selector,{
                                  "chat_negotiation": "chat_negotiation",
@@ -517,9 +529,10 @@ builder.add_edge(
 
 builder.add_edge("output","summarize")
 builder.add_edge("summarize", "input")
-builder.add_edge("input", END)
+# builder.add_edge("input", END)
 
 app = builder.compile()
+
 
 
 # from IPython.display import Image, display
@@ -529,6 +542,45 @@ app = builder.compile()
 #     f.write(graph_image)
 
 # display(Image(filename='image_output.png'))
+
+
+
+
+# from IPython.display import Image, display
+# from IPython.display import display, HTML
+
+# mermaid_code = app.get_graph().draw_mermaid()
+
+# # 2. Save it to a .mmd file
+# with open("graph.mmd", "w") as f:
+#     f.write(mermaid_code)
+
+# mermaid_code = app.get_graph().draw_mermaid()
+
+
+
+
+# html = f"""
+# <!DOCTYPE html>
+# <html>
+# <head>
+#   <meta charset="utf-8">
+#   <script type="module">
+#     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+#     mermaid.initialize({{ startOnLoad: true }});
+#   </script>
+# </head>
+# <body>
+#   <div class="mermaid">
+#     {mermaid_code}
+#   </div>
+# </body>
+# </html>
+# """
+
+# with open("graph_output.html", "w") as f:
+#     f.write(html)
+
 
 state: State = {
     "messages": [],
