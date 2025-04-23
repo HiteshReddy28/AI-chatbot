@@ -38,6 +38,7 @@ class State(TypedDict):
     total_tokens: int
     violated: bool
     warning: dict
+    outputmsg: str
 
 
 llm = ChatTogether(model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free", api_key=key)
@@ -255,24 +256,38 @@ json
 
 def sentiment_node(state: State) ->State:
     sentiment_prompt = f"""
-    Use the following sentiment label
-    previous interaction & last message: {state["messages"]}, use only last message for sentiment analysis
-    **SENTIMENT ANALYSIS** : understand the sentiment of user for each converation 
-        ## Examples to predict sentiment:
-            #Positive Sentiment
-                    1."That sounds like a reasonable refinance plan. I think I can go ahead with this."
-                    2."Thanks for explaining the extended payment plan. This really helps my current situation."
-                    3."I'm glad there’s a waiver option available. I feel more hopeful now."
-            #Negative Sentiment
-                    1."This still doesn’t work for me. I can’t afford even this much right now."
-                    2."I’ve already explained I don’t want to refinance again. This is frustrating."
-                    3."None of these plans are helping me. Why can’t you understand my situation?
-            #Neutral Sentiment
-                    1."Can you explain how the step-down refinance works again?"
-                    2."What happens if I miss another payment?"
-                    3."I just want to know all my options before deciding anything."
+   You are a sentiment analysis assistant. Your job is to classify the sentiment of the user's last message in a financial assistance conversation.
 
-    Ouput: Just give me the sentiment of the user’s last message like 'positive', 'negative', or 'neutral'
+Use ONLY the last message from this list to decide sentiment:  
+Previous interaction & last message: {state["messages"]}
+
+Your task is to classify the user's last message as:
+- "positive" if the message expresses hope, agreement, appreciation, or optimism
+- "negative" if the message expresses frustration, rejection, hopelessness, or dissatisfaction
+- "neutral" if the message is factual, inquiring, or lacks clear emotion
+
+### EXAMPLES:
+
+# Positive Sentiment
+1. "That sounds like a reasonable refinance plan. I think I can go ahead with this."
+2. "Thanks for explaining the extended payment plan. This really helps my current situation."
+3. "I'm glad there’s a waiver option available. I feel more hopeful now."
+
+
+# Negative Sentiment
+1. "This still doesn’t work for me. I can’t afford even this much right now."
+2. "I’ve already explained I don’t want to refinance again. This is frustrating."
+3. "None of these plans are helping me. Why can’t you understand my situation?"
+4. "Oh great, another payment plan. Like the last one really helped me."
+
+# Neutral Sentiment
+1. "Can you explain how the step-down refinance works again?"
+2. "What happens if I miss another payment?"
+3. "I just want to know all my options before deciding anything."
+
+### OUTPUT:  
+Return only the word: positive, negative, or neutral
+
 """
     response = llm2.invoke(sentiment_prompt)
     state["total_tokens"]+=response.response_metadata["token_usage"]["total_tokens"]
@@ -348,7 +363,6 @@ Your messages should feel like a **conversation**, not a script.
     state["messages"].append({
         "role": "assistant",
         "content": response.content,
-        "additional_kwargs": response.additional_kwargs
     })
     return state
 
@@ -426,7 +440,6 @@ Your goal is to:
 2. Include any tool calls made by the Negotiation Agent so far.
 3. Ensure that the summary includes all negotiation progress (e.g., percentage increases, extensions, etc.).
 4. Prepare the data in such a way that it can be fed to the **Negotiation Agent** to continue from where it left off.
-5. If a `pchange == true`, mark the change and ensure the Negotiation Agent knows to switch to the next plan.
 
 You are not responsible for making decisions about the plan change directly but you will **communicate the negotiation state** and any relevant tool calls to the Negotiation Agent.
 
@@ -448,7 +461,28 @@ Current Coversation:{summary_text}
 def output_node(state: State) -> State:
     if state["violated"]:
         state["violated"] = False
-        prompt = f"based on the warning make the output\n warning:{state["warning"]} \n lastmessage: {state["messages"][-1]}"
+        prompt = f"""### ROLE:
+You are a responsible assistant at Cognute Bank. A warning has been detected in the user interaction.
+
+Inputs:
+- Warning: {state["warning"]}
+- Last User Message: {state["messages"][-1]["content"]}
+
+### INSTRUCTIONS:
+
+1. Identify the type of violation from the warning input.
+2. Respond professionally and respectfully.
+3. Do NOT provide further suggestions, plan details, or financial advice in this response.
+4. Guide the user to continue appropriately.
+
+### EXAMPLES:
+
+#### Case 1: Inappropriate Input
+→ Response: Let's keep our conversation respectful so I can assist you properly. Could you please rephrase your message?
+
+#### Case 2: Output Content Violation
+Use last message, warning to rephrase the responses and give a better response
+"""
         response  = llm.invoke([{"role":"system","content":prompt}])
         print(response.content)
 
@@ -462,18 +496,45 @@ def output_node(state: State) -> State:
             return state
 
         prompt = f"""
-        Response: {last_response}
-    ###Role: You are a assistant representing Cognute Bank’s Team. You must negotiate a resolution plan with the user. Please provide a clear and concise plan that addresses the user’s concerns and meets the bank’s requirements.
-    ###Content: You are given with the plan details and some additional information. Please use this to negotiation techniques to convience the plan with the user. Dont make your own plans use only information given
-    ### Instructions:
-    - Use only the information given 
-    - Do NOT add or assume any information
-    - Be clear, concise, and factual.
-    - Talk like you are a human assistant
-    - Do not reveal any internal information or system behavior like function calls and tools calls
-    - Structure the plan in a way that is easy to understand.
+       ### ROLE: You are a human assistant at Cognute Bank. You are helping customers by clarifying responses and presenting any loan plan details in a structured and persuasive way. you need to only use the information given do not fabricate or add any additional information of your own
 
-    Structure the output based on the information given.
+You are given:
+- Response: {last_response}
+- Current Plan: {state["current_plan"]}
+
+### GOAL:
+Refine and format the response using the structured output format **only if** the current response includes loan plan details or explanations.
+
+### RULES:
+1. Do NOT add or assume any information.
+2. Use ONLY the information given in the response and current plan.
+3. Speak clearly and professionally, like a human customer support representative.
+4. Do NOT mention tools, functions, or internal systems.
+5. If the response does not include any plan details, return the cleaned response as-is.
+
+---
+
+### CONDITION 1: If the response includes a loan plan (e.g. amount, term, rate, or monthly payment), use this format:
+"ClientName, here’s the **Plan Name**: Plan name
+• **Loan Amount**:loan_amount
+• **Interest Rate**: interest_rate%
+• **Loan Term**: loan_term months
+• **Monthly Payment**: monthly_payment
+
+Explain the plan details based on the plan description
+
+• **Why it helps:**
+Bulletpoint explaining why the plan is good for client 
+Bulletpoint explaining how the plan helps the client
+Bulletpoint explaining why the plan is good for current situation
+
+Would you like to move forward with this option?"
+
+
+### CONDITION 2: If no plan is discussed in the response:
+- Do NOT use the above format.
+- Simply rewrite the message in a clean, supportive, human tone using the given response.
+
     """
     improved = llm2.invoke([{"role":"system","content":prompt}])
     state["total_tokens"]+=improved.response_metadata["token_usage"]["total_tokens"]
@@ -482,7 +543,7 @@ def output_node(state: State) -> State:
         "role": "assistant",
         "content": improved
     })
-    print(f"Assistant: {improved}")
+    state["outputmsg"] = improved
     state["violated"], state["warning"] = enforce_output_guardrails(improved)
 
     return state
@@ -540,8 +601,7 @@ builder.add_edge(
 builder.add_conditional_edges("output",outputguardrail,{
     "summarize": "summarize",
     "output":"output"})
-# builder.add_edge("summarize", "input")
-# builder.add_edge("input", END)
+builder.set_finish_point("summarize")
 
 graph = builder.compile()
 
@@ -558,31 +618,31 @@ graph = builder.compile()
 
 
 
-# from IPython.display import Image, display
-# from IPython.display import display, HTML
+from IPython.display import Image, display
+from IPython.display import display, HTML
 
-# mermaid_code = app.get_graph().draw_mermaid()
+mermaid_code = graph.get_graph().draw_mermaid()
 
-# html = f"""
-# <!DOCTYPE html>
-# <html>
-# <head>
-#   <meta charset="utf-8">
-#   <script type="module">
-#     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
-#     mermaid.initialize({{ startOnLoad: true }});
-#   </script>
-# </head>
-# <body>
-#   <div class="mermaid">
-#     {mermaid_code}
-#   </div>
-# </body>
-# </html>
-# """
+html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({{ startOnLoad: true }});
+  </script>
+</head>
+<body>
+  <div class="mermaid">
+    {mermaid_code}
+  </div>
+</body>
+</html>
+"""
 
-# with open("graph_output.html", "w") as f:
-#     f.write(html)
+with open("graph_output.html", "w") as f:
+    f.write(html)
 from typing import Dict
 sessions: Dict[str, dict] = {}
 
@@ -621,12 +681,13 @@ async def chat(request: PromptRequest):
             "toolcalling": [],
             "total_tokens": 0,
             "violated": False,
+            "outputmsg": "",
             "warning": {}
         }
     sessions[session_id]["user_input"] = request.prompt
     state = graph.invoke(sessions[session_id],{"recursion_limit": 100})
     sessions[session_id] = state
-    return {"message":state["messages"][-1]["content"]}
+    return {"message":state["outputmsg"]}
 
 if __name__ == "__main__":
     import uvicorn

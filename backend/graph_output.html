@@ -24,9 +24,10 @@ graph TD;
 	output(output)
 	sentiment(sentiment)
 	Plan_selector(Plan_selector)
+	__end__([<p>__end__</p>]):::last
 	__start__ --> input;
 	chat_negotiation --> output;
-	summarize --> input;
+	summarize --> __end__;
 	tool_call --> Plan_selector;
 	input -.-> output;
 	input -.-> sentiment;
