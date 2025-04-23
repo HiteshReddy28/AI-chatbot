@@ -14,12 +14,18 @@ from calculation import (
     extended_payment_plan, settlement_plan_with_waivers
 )
 from rails import enforce_input_guardrails, enforce_output_guardrails
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 
 load_dotenv()
 key = os.getenv("TOGETHER_API_KEY")
 Api_key = os.getenv("TOGETHER_API_KEY2")
 class State(TypedDict):
     messages: list
+    user_input: str
     customer_details: dict
     current_plan: str
     plans: dict
@@ -171,8 +177,7 @@ llm_with_tools = llm.bind_tools(list(tool_mapping.values()))
 
 def input_node(state: State) -> State:
     state["messages"].append({"role":"assistant", "content": "Hi, how can I assist you today?"})
-    user_input = input("User: ")
-    
+    user_input = state["user_input"]
 
     if user_input.lower() in ["exit", "quit", "bye", "goodbye"]:
         print("👋 Thanks for chatting! Have a great day.")
@@ -181,7 +186,7 @@ def input_node(state: State) -> State:
     state["violated"], state["warning"] = enforce_input_guardrails(user_input)
     if state['violated'] == False:
         state["messages"].append({"role": "user", "content": user_input})
-    # print(state["total_tokens"])
+
     return state
 
 def plan_selector_node(state: State) -> State:
@@ -336,7 +341,7 @@ Your messages should feel like a **conversation**, not a script.
 - Length: short and should consist everything related to the conversation.
 
 """
-    system_prompt = {"role": "system", "content": prompt + f"""`Customer Details`: {state['customer_details']}\n`Current Plan`: {state["current_plan"]}"""}
+    system_prompt = {"role": "system", "content": prompt}
     full_messages = [system_prompt] + state["messages"] 
     response = llm.invoke(full_messages)
     state["total_tokens"]+=response.response_metadata["token_usage"]["total_tokens"]
@@ -376,7 +381,7 @@ def tool_call_node(state: State) -> State:
             })
         else:
             tool_result = tool_mapping[tool](**args)
-            state["Threshold"] = 1
+            state["Threshold"] = 3
             state["pchange"] = False
             state["toolcalling"].append({
                 "role": "tool",
@@ -444,12 +449,14 @@ def output_node(state: State) -> State:
     if state["violated"]:
         state["violated"] = False
         prompt = f"based on the warning make the output\n warning:{state["warning"]} \n lastmessage: {state["messages"][-1]}"
+        response  = llm.invoke([{"role":"system","content":prompt}])
+        print(response.content)
 
     else:
         last_msg = state["messages"][-1]
         last_response = last_msg["content"]
         state["messages"].pop()
-        print(f"LLM with tools: {last_response}")
+        # print(f"LLM with tools: {last_response}")
         if not last_response:
             print(" Assistant response was empty. Skipping rewrite.")
             return state
@@ -468,13 +475,14 @@ def output_node(state: State) -> State:
 
     Structure the output based on the information given.
     """
-    improved = llm2.invoke(prompt)
+    improved = llm2.invoke([{"role":"system","content":prompt}])
     state["total_tokens"]+=improved.response_metadata["token_usage"]["total_tokens"]
     improved = improved.content
     state["messages"].append({
         "role": "assistant",
         "content": improved
     })
+    print(f"Assistant: {improved}")
     state["violated"], state["warning"] = enforce_output_guardrails(improved)
 
     return state
@@ -532,10 +540,10 @@ builder.add_edge(
 builder.add_conditional_edges("output",outputguardrail,{
     "summarize": "summarize",
     "output":"output"})
-builder.add_edge("summarize", "input")
+# builder.add_edge("summarize", "input")
 # builder.add_edge("input", END)
 
-app = builder.compile()
+graph = builder.compile()
 
 
 
@@ -550,48 +558,76 @@ app = builder.compile()
 
 
 
-from IPython.display import Image, display
-from IPython.display import display, HTML
+# from IPython.display import Image, display
+# from IPython.display import display, HTML
 
-mermaid_code = app.get_graph().draw_mermaid()
+# mermaid_code = app.get_graph().draw_mermaid()
 
-html = f"""
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <script type="module">
-    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
-    mermaid.initialize({{ startOnLoad: true }});
-  </script>
-</head>
-<body>
-  <div class="mermaid">
-    {mermaid_code}
-  </div>
-</body>
-</html>
-"""
+# html = f"""
+# <!DOCTYPE html>
+# <html>
+# <head>
+#   <meta charset="utf-8">
+#   <script type="module">
+#     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+#     mermaid.initialize({{ startOnLoad: true }});
+#   </script>
+# </head>
+# <body>
+#   <div class="mermaid">
+#     {mermaid_code}
+#   </div>
+# </body>
+# </html>
+# """
 
-with open("graph_output.html", "w") as f:
-    f.write(html)
+# with open("graph_output.html", "w") as f:
+#     f.write(html)
+from typing import Dict
+sessions: Dict[str, dict] = {}
 
+class PromptRequest(BaseModel):
+    prompt: str
+    session_id: str
 
-state: State = {
-    "messages": [],
-    "customer_details": get_customer_details("@email.com"),
-    "plans": get_plans("CUST123456"),
-    "Sentiment": "",
-    "Threshold": 3,
-    "Greedy": 10,
-    "pchange": True,
-    "user_history": False,
-    "current_plan": "",
-    "toolcalling":[],
-    "total_tokens": 0,
-    "violated": False,
-    "warning": {}
-}
+app = FastAPI()
+origins = [
+    "http://localhost:3000",  
+]
 
-print("Assistant: Welcome to the chat. Can you explain more about you financial situation?")
-state = app.invoke(state,{"recursion_limit": 100})
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  
+    allow_credentials=True,
+    allow_methods=["*"],  
+    allow_headers=["*"],  
+)
+
+@app.post("/api/chat")
+async def chat(request: PromptRequest):
+    session_id = request.session_id
+    if session_id not in sessions:
+        sessions[session_id] = {
+            "messages": [],
+            "user_input": "",
+            "customer_details": get_customer_details("@email.com"),
+            "plans": get_plans("CUST123456"),
+            "Sentiment": "",
+            "Threshold": 3,
+            "Greedy": 10,
+            "pchange": True,
+            "user_history": False,
+            "current_plan": "",
+            "toolcalling": [],
+            "total_tokens": 0,
+            "violated": False,
+            "warning": {}
+        }
+    sessions[session_id]["user_input"] = request.prompt
+    state = graph.invoke(sessions[session_id],{"recursion_limit": 100})
+    sessions[session_id] = state
+    return {"message":state["messages"][-1]["content"]}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

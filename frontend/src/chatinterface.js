@@ -37,7 +37,7 @@ const ChatInterface = () => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ "prompt":prompt, "session_id": "123" }),
     });
 
     if (!response.ok) {
