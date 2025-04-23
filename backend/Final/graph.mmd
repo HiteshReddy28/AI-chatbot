@@ -1,0 +1,28 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	input(input)
+	input_guardrails(input_guardrails)
+	sentiment_threshold(sentiment_threshold)
+	chat_negotiation(chat_negotiation)
+	tool_call(tool_call)
+	output_guardrails(output_guardrails)
+	output(output)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> input;
+	input --> __end__;
+	input --> input_guardrails;
+	input_guardrails --> sentiment_threshold;
+	output --> input;
+	output_guardrails --> output;
+	sentiment_threshold --> chat_negotiation;
+	tool_call --> chat_negotiation;
+	chat_negotiation -.-> tool_call;
+	chat_negotiation -. &nbsp;output&nbsp; .-> output_guardrails;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

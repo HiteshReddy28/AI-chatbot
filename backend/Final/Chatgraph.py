@@ -11,6 +11,7 @@ from langchain_core.messages import ToolMessage
 from fastapi import HTTPException
 from rails import enforce_input_guardrails,enforce_output_guardrails
 
+
 from calculation import (
     refinance_same, refinance_step_down, refinance_step_up,
     extended_payment_plan, settlement_plan_with_waivers
@@ -500,16 +501,6 @@ builder.add_edge("input", END)
 # Compile the graph
 app = builder.compile()
 
-
-# from IPython.display import Image, display
-
-
-# graph_image = app.get_graph().draw_mermaid_png()
-
-# with open('image_output.png', 'wb') as f:
-#     f.write(graph_image)
-
-# display(Image(filename='image_output.png'))
 
 state: State = {
     "messages": [],
