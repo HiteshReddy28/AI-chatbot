@@ -10,8 +10,16 @@ import os
 import random
 from jose import JWTError
 from dotenv import load_dotenv
-from cg import app as graph_app
-from Shared import get_client_details, get_plans
+from chat import graph
+
+#from Shared import get_client_details, get_plans
+
+from plans import get_plans
+from customer import get_client_details
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+from guard import enforce_input_guardrails
 
 # ENV and DB Setup
 load_dotenv()
@@ -48,7 +56,7 @@ app.add_middleware(
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
 
-# Models
+# --- Models ---
 class UserSignup(BaseModel):
     first_name: str
     last_name: str
@@ -66,21 +74,24 @@ class ChatMessage(BaseModel):
     message: str
 
 class ChatRequest(BaseModel):
-    client_id: str
-    requested_changes: str
+    session_id: str
+    prompt: str
 
 class ClientVerification(BaseModel):
     client_id: str
     passcode: str
 
-# JWT
+# --- JWT Utilities ---
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=60))
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# Routes 
+# --- In-Memory Session Store ---
+sessions = {}
+
+# --- API Routes ---
 @app.post("/api/signup")
 def signup(user: UserSignup):
     client_id = str(random.randint(10000, 99999))
@@ -140,48 +151,63 @@ def verify_user(verify: ClientVerification):
         raise HTTPException(status_code=400, detail="Invalid credentials")
     return {"message": "Access granted"}
 
-# LangGraph-powered Negotiation 
 @app.post("/api/negotiate")
-def negotiate(data: ChatRequest, token: str = Depends(oauth2_scheme)):
+def negotiate(request: ChatRequest, token: str = Depends(oauth2_scheme)):
     try:
-        print(f"Incoming from frontend: client_id='{data.client_id}' requested_changes='{data.requested_changes}'")
+        session_id = request.session_id
+        prompt = request.prompt
+        print(f"Incoming from frontend: session_id='{session_id}' requested_changes='{prompt}'")
 
-        state = {
-            "messages": [{"role": "user", "content": data.requested_changes}],
-            "customer_details": get_client_details(data.client_id),
-            "plans": get_plans(data.client_id, 1),
-            "Sentiment": "",
-            "Threshold": 3,
-            "Greedy": 10,
-            "pchange": True,
-            "user_history": False,
-            "current_plan": "",
-            "toolcalling": [],
-            "total_tokens": 0,
-            "violated": False,
-            "warning": {}
-        }
+        if session_id not in sessions:
+            sessions[session_id] = {
+                "messages": [],
+                "user_input": "",
+                "customer_details": get_client_details("@email.com"),
+                "plans": get_plans("CUST123456"),
+                "Sentiment": "",
+                "Threshold": 1,
+                "Greedy": 10,
+                "pchange": True,
+                "user_history": False,
+                "current_plan": "",
+                "toolcalling": [],
+                "total_tokens": 0,
+                "violated": False,
+                "warning": {},
+                "outputmsg": ""
+            }
 
-        result = graph_app.invoke(state, {"recursion_limit": 100})
-        reply = result.get("final_output", "Negotiation error: No final message found.")
+        sessions[session_id]["user_input"] = prompt
+        state = graph.invoke(sessions[session_id], {"recursion_limit": 100})
+        sessions[session_id] = state
 
-        cursor.execute("INSERT INTO chat_history (client_id, sender, message) VALUES (%s, %s, %s)", 
-                       (data.client_id, "bot", reply))
-        conn.commit()
-
-        return {"negotiation_response": reply}
+        reply = state.get("outputmsg", "Negotiation error: No message returned.")
+        return {"message": reply}
     
     except Exception as e:
-        print("NEGOTIATION ERROR:", str(e))  # Add this
+        print("NEGOTIATION ERROR:", str(e))
         raise HTTPException(status_code=500, detail=str(e))
-
-
 
 @app.get("/")
 def root():
-    return {"message": "Langchain-Powered AI Backend Ready"}
+    return {"message": "LangGraph AI Backend is Running"}
 
-#Run FastAPI App
+
+class GuardInput(BaseModel):
+    text: str
+
+@app.post("/api/guardrails/input")
+def check_input_guardrails(payload: GuardInput):
+    violated, result = enforce_input_guardrails(payload.text)
+    return {"violated": violated, "result": result}
+
+# @app.post("/api/guardrails/output")
+# def check_output_guardrails(payload: GuardInput):
+#     violated, result = enforce_output_guardrails(payload.text)
+#     return {"violated": violated, "result": result}
+
+
+# Run server
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

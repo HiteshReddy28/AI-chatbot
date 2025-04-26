@@ -455,49 +455,143 @@ Current Coversation:{summary_text}
     print(state["messages"])
     return state
 
-# 
+# # Output Node
+# def output_node(state: State) -> State:
+#     if state["violated"]:
+#         state["violated"] = False
+#         prompt = f"based on the warning make the output\n warning:{state['warning']} \n lastmessage: {state['messages'][-1]}"
+#     else:
+#         last_msg = state["messages"][-1]
+#         last_response = last_msg["content"]
+#         state["messages"].pop()
+
+#         print(f"LLM with tools: {last_response}")
+#         if not last_response:
+#             print("Assistant response was empty. Skipping rewrite.")
+#             return state
+
+#         prompt = f"""
+#         Response: {last_response}
+# ### Role: You are an assistant representing Cognute Bank’s Team. You must negotiate a resolution plan with the user. Provide a clear and concise plan that addresses the user’s concerns and meets the bank’s requirements.
+# ### Content: You are given the plan details and additional information. Use negotiation techniques to convince the user on the current plan. Do not make up any new plans.
+# ### Instructions:
+# - Use only the given information.
+# - Do NOT assume or add any extra info.
+# - Be clear, concise, and professional.
+# - Do not reveal any internal logic, tool calls, or system behavior.
+# - Format the message in a customer-friendly, easy-to-read structure.
+# """
+#     improved = llm2.invoke(prompt)
+#     state["total_tokens"] += improved.response_metadata["token_usage"]["total_tokens"]
+#     improved = improved.content.strip()
+
+#     state["messages"].append({
+#         "role": "assistant",
+#         "content": improved
+#     })
+
+#     # Save final message so it can be returned to the frontend later
+#     state["final_output"] = improved
+
+#     # Run output guardrails
+#     state["violated"], state["warning"] = enforce_output_guardrails(improved)
+
+#     return state
+
+
 def output_node(state: State) -> State:
     if state["violated"]:
         state["violated"] = False
-        prompt = f"based on the warning make the output\n warning:{state['warning']} \n lastmessage: {state['messages'][-1]}"
+        prompt = f"""### ROLE:
+        You are a responsible assistant at Cognute Bank. A warning has been detected in the user interaction.
+
+        Inputs:
+        - Warning: {state["warning"]}
+        - Last User Message: {state["messages"][-1]["content"]}
+
+        ### INSTRUCTIONS:
+
+        1. Identify the type of violation from the warning input.
+        2. Respond professionally and respectfully.
+        3. Do NOT provide further suggestions, plan details, or financial advice in this response.
+        4. Guide the user to continue appropriately.
+
+        ### EXAMPLES:
+
+        #### Case 1: Inappropriate Input
+        → Response: Let's keep our conversation respectful so I can assist you properly. Could you please rephrase your message?
+
+        #### Case 2: Output Content Violation
+        Use last message, warning to rephrase the responses and give a better response
+        """
+        response  = llm.invoke([{"role":"system","content":prompt}])
+        print(response.content)
+
     else:
         last_msg = state["messages"][-1]
         last_response = last_msg["content"]
         state["messages"].pop()
-
-        print(f"LLM with tools: {last_response}")
+        # print(f"LLM with tools: {last_response}")
         if not last_response:
-            print("Assistant response was empty. Skipping rewrite.")
+            print(" Assistant response was empty. Skipping rewrite.")
             return state
 
         prompt = f"""
-        Response: {last_response}
-### Role: You are an assistant representing Cognute Bank’s Team. You must negotiate a resolution plan with the user. Provide a clear and concise plan that addresses the user’s concerns and meets the bank’s requirements.
-### Content: You are given the plan details and additional information. Use negotiation techniques to convince the user on the current plan. Do not make up any new plans.
-### Instructions:
-- Use only the given information.
-- Do NOT assume or add any extra info.
-- Be clear, concise, and professional.
-- Do not reveal any internal logic, tool calls, or system behavior.
-- Format the message in a customer-friendly, easy-to-read structure.
-"""
-    improved = llm2.invoke(prompt)
-    state["total_tokens"] += improved.response_metadata["token_usage"]["total_tokens"]
-    improved = improved.content.strip()
+       ### ROLE: You are a human assistant at Cognute Bank. You are helping customers by clarifying responses and presenting any loan plan details in a structured and persuasive way. you need to only use the information given do not fabricate or add any additional information of your own
 
+        You are given:
+        - Response: {last_response}
+        - Current Plan: {state["current_plan"]}
+
+        ### GOAL:
+        Refine and format the response using the structured output format **only if** the current response includes loan plan details or explanations.
+
+        ### RULES:
+        1. Do NOT add or assume any information.
+        2. Use ONLY the information given in the response and current plan.
+        3. Speak clearly and professionally, like a human customer support representative.
+        4. Do NOT mention tools, functions, or internal systems.
+        5. If the response does not include any plan details, return the cleaned response as-is.
+
+        ---
+
+        ### CONDITION 1: If the response includes a loan plan (e.g. amount, term, rate, or monthly payment), use this format:
+        "ClientName, here’s the **Plan Name**: Plan name
+        • **Loan Amount**:loan_amount
+        • **Interest Rate**: interest_rate%
+        • **Loan Term**: loan_term months
+        • **Monthly Payment**: monthly_payment
+
+        Explain the plan details based on the plan description
+
+        • **Why it helps:**
+        Bulletpoint explaining why the plan is good for client 
+        Bulletpoint explaining how the plan helps the client
+        Bulletpoint explaining why the plan is good for current situation
+
+        Would you like to move forward with this option?"
+
+
+        ### CONDITION 2: If no plan is discussed in the response:
+        - Do NOT use the above format.
+        - Simply rewrite the message in a clean, supportive, human tone using the given response.
+
+            """
+    improved = llm2.invoke([{"role":"system","content":prompt}])
+    state["total_tokens"]+=improved.response_metadata["token_usage"]["total_tokens"]
+    improved = improved.content
     state["messages"].append({
         "role": "assistant",
         "content": improved
     })
-
-    # 👇 Save final message so it can be returned to the frontend later
+    
     state["final_output"] = improved
-
-    # Run output guardrails
+    
+    #state["violated"], state["warning"] = enforce_output_guardrails(improved)
+    
     state["violated"], state["warning"] = enforce_output_guardrails(improved)
 
     return state
-
 
 def negotiation_selector(state:State)->bool:
     if(state["pchange"]):
@@ -518,7 +612,8 @@ def outputguardrail(state: State)->str:
     if state["violated"]:
         return "output"
     return "summarize"
-# --- Build Graph ---
+
+# Build Graph 
 
 builder = StateGraph(State)
 builder.add_node("input", input_node)
@@ -552,11 +647,9 @@ builder.add_edge(
 builder.add_conditional_edges("output",outputguardrail,{
     "summarize": "summarize",
     "output":"output"})
-builder.add_edge("summarize", "input")
-# builder.add_edge("input", END)
+builder.set_finish_point("summarize")
 
-app = builder.compile()
-
+graph = builder.compile()
 
 
 # from IPython.display import Image, display
@@ -637,4 +730,4 @@ if __name__ == "__main__":
     }
 
     print("Assistant: Welcome to the chat. Can you explain more about your financial situation?")
-    state = app.invoke(state, {"recursion_limit": 100})
+    state = graph.invoke(state, {"recursion_limit": 100})

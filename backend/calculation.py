@@ -75,28 +75,37 @@ def extended_payment_plan(loan_amount: float, interest_rate: float, original_ter
 
 def settlement_plan_with_waivers(
     loan_balance: float,
+    loan_amount: int,
+    interest_rate: float,
+    Term: int,
+    monthly_balance: float,
     fee_waiver_percent: float = 0,
     interest_waiver_percent: float = 0,
     principal_waiver_percent: float = 0,
-    original_fee: Optional[float] = 0,
-    original_interest: Optional[float] = 0
+    dues: Optional[float] = 0,
+    original_interest: Optional[float] = 0,
+    
 ) -> dict:
     
-    waived_fee = (original_fee or 0) * fee_waiver_percent / 100
+    waived_fee = (dues or 0) * fee_waiver_percent / 100
     waived_interest = (original_interest or 0) * interest_waiver_percent / 100
     waived_principal = loan_balance * principal_waiver_percent / 100
 
     settlement_amount = (
-        (original_fee or 0) - waived_fee +
-        (original_interest or 0) - waived_interest +
-        loan_balance - waived_principal
+        loan_balance - waived_principal+
+        (dues or 0) - waived_fee +
+        (original_interest or 0) - waived_interest 
+        
     )
 
     return {
         "type": "Settlement Plan with Waive-Off",
-        "waived_fee": round(waived_fee, 2),
-        "waived_interest": round(waived_interest, 2),
-        "waived_principal": round(waived_principal, 2),
         "total_settlement": round(settlement_amount, 2),
+        "Loan_amount": loan_amount,
+        "Interest_rate": interest_rate,
+        "Term": Term,
+        "waived_fee": round(waived_fee, 2),
+        "Updated dues": round(dues - waived_fee,2),
+        "monthly_balance": monthly_balance,
         "description": "Calculated based on requested waiver percentages."
     }
