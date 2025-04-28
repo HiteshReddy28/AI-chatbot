@@ -51,7 +51,7 @@ def query_llm(prompt: str, user_input: str) -> Tuple[bool, int]:
 # Guard Definitions
 
 INPUT_GUARDS = [
-    ("Detected offensive content.", "Does this input contain profanity or toxic language like idiot, stupid, etc? Reply yes or no.")
+    ("Detected offensive content.", "Does this input contain profanity or toxic language like idiot, stupid, etc Ignore words like no, ok? Reply yes or no.")
 ]
 
 # OUTPUT_GUARDS = [

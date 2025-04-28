@@ -18,7 +18,7 @@ def get_plans(customer_id:str):
           "negotiation_rules": [
             "Start by explaining that this plan keeps everything familiar — same loan, same structure — but with an optimized repayment schedule.",
             "Emphasize peace of mind: ‘No increase in debt, just smoother payments.’",
-            "Use tool output to show reduced EMI or better interest rate, reinforcing: ‘This gives you breathing room without touching your loan balance.’",
+            "Use tool output to show: ‘This gives you breathing room without touching your loan balance.’",
             "Position it as the most stable option available today, ideal for maintaining control during uncertain times.",
             "Use positive framing like: ‘This is a no-change solution that helps you stay on track — no surprises, just relief.’"
           ],
@@ -43,7 +43,7 @@ def get_plans(customer_id:str):
             "plan_id": 2,
             "name": "Refinance Step Up",
             "priority": 2,
-            "description": "Increase loan principal slightly to restructure and reduce EMI, often with a longer tenure or lower interest rate.",
+            "description": "Increase loan principal slightly to restructure, often with a longer tenure or lower interest rate.",
             "is_step_based": True,
             "Steps": [10, 20],
             "Step_description": "Use the percentage given in steps. Always begin at 10% and progress in order if needed, never skipping.",
@@ -89,13 +89,14 @@ def get_plans(customer_id:str):
   ],
   "pros": [
     "Gives quick EMI relief while keeping your loan structure mostly intact.",
+    "Reduce customers monthly payments",
     "The changes are small and manageable — a soft landing rather than a major change.",
-    "You always decide if the next step makes sense — you stay in control the whole way."
+    "You always decide if the next step makes sense — you stay in control the whole way.",
   ],
   "cons": [
     "The initial step provides mild relief — may not be enough if your situation is urgent.",
     "We’ll need to go step-by-step to reach the full benefit, which takes a little more time.",
-    "The total loan duration may increase slightly depending on how far we go."
+    "The total loan duration may increase slightly depending on how far we go.",
   ],
   "Tool_results":{"3_months_extension":{"Monthly Payment": 180.8,"loan_amount": 10000.0,
               "loan_term": 63,

@@ -56,7 +56,7 @@ app.add_middleware(
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/token")
 
-# --- Models ---
+# Models 
 class UserSignup(BaseModel):
     first_name: str
     last_name: str
@@ -81,17 +81,17 @@ class ClientVerification(BaseModel):
     client_id: str
     passcode: str
 
-# --- JWT Utilities ---
+# JWT Utilities 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# --- In-Memory Session Store ---
+# In-Memory Session Store 
 sessions = {}
 
-# --- API Routes ---
+# API Routes 
 @app.post("/api/signup")
 def signup(user: UserSignup):
     client_id = str(random.randint(10000, 99999))

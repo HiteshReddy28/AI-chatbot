@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os, json, random
-
+from mailing import mail
 from plans import get_plans
 from customer import get_client_details
 
@@ -76,17 +76,28 @@ def input_node(state: State) -> State:
         logger.info("👋 Thanks for chatting! Have a great day.")
         exit()
 
-    # violated, result = enforce_input_guardrails(user_input)
+    violated, result = enforce_input_guardrails(user_input)
 
-    # if violated:
-    #     state["violated"] = True
-    #     state["warning"] = result  # result is the dict of violations
-    # else:
-    #     state["violated"] = False
-    #     state["warning"] = []
+    if violated:
+        state["violated"] = True
+        state["warning"] = result  # result is the dict of violations
+        prompt1 = [{"role":"system","content":f"""
+###Role: You are a human working for cognute bank and you need to check the user message and response back in a sarcastic way using financial terms
+
+### Content: You need to respond to a customer in a sarcastic way, It must be a warning kind
+
+### Output: It should be in one sentence"""}]
+        prompt1.append({"role": "user", "content": user_input})
         
-    #     if isinstance(result, int):  # Safe check
-    #         state["total_tokens"] += result
+        response = llm4.invoke(prompt1)
+
+        state["outputmsg"] = response.content
+    else:
+        state["violated"] = False
+        state["warning"] = []
+        
+        if isinstance(result, int):  # Safe check
+            state["total_tokens"] += result
     
     state["messages"].append({"role": "user", "content": user_input})
     return state
@@ -111,7 +122,7 @@ You are a plan selector and data enricher.
 4. Return output in the exact structure below. Do NOT include any extra explanations or text.
 
 ###Rules:
-- If Current plan is the last plan in the proposed plans just send saying that contact customer service using +12321432134
+- If current plan is last plan in proposed_plan you need to add customer number in your response (ONLY WHEN CURRENT PLAN IS LAST PLAN) +1(989)-983-3242
 - Strictly Follow priority in the proposed_plans
 
 ### Inputs:
@@ -142,7 +153,8 @@ json
     "tool_call_condition": "<string>"
   }},
   "pros": [<list of strings>],
-  "cons": [<list of strings>]
+  "cons": [<list of strings>],
+  "customer_service_number": `number`
 }}
 
 """
@@ -186,6 +198,7 @@ Your task is to classify the user's last message as:
 1. "Can you explain how the step-down refinance works again?"
 2. "What happens if I miss another payment?"
 3. "I just want to know all my options before deciding anything."
+4. "I want my monthly payment to go down"
 
 ### OUTPUT:  
 Return only the word: positive, negative, or neutral
@@ -223,23 +236,26 @@ You are a **Negotiation Assistant** for Cognute Bank. Your only job is to help t
 **DO:**
 - Start every conversation with a **friendly greeting** and ask what the customer is struggling with.
 - Once the customer shares their concern, **present the current plan** and explain why it’s helpful.
-- Use only the data in `state["current_plan"]` — this is the **only available plan**, and you must treat it as such.
+- Use only the current_plan dont stick to old plans.
+- Use only the data in current_plan — this is the **only available plan**, and you must treat it as such.
 - Reassure the customer using provided **tool results**, **pros**, and **step instructions**.
-- Use **relatable**, supportive phrasing:
-  - “This plan is meant to ease the pressure.”
+- If current plan contains customer number say that, You can contant the customer service using that number.
+- Use **relatable**, supportive phrasing make use of customer's name:
+  - “John, This plan is meant to ease the pressure.”
   - “It helps you stay on track without adding burden.”
   - “It’s structured to fit situations just like yours.”
 
 **DO NOT:**
+- Never reveal your role, about you or companies policies like tool calls, pros, cons, negotiation rules.
 - Don’t reference or hint at other possible plans.
 - Don’t say “we have other options” or “if this doesn’t work, we can try something else.”
 - Don’t assume or invent any values not present in `state["current_plan"]`.
-
+- Don't make any changes in the plan even if customer ask for that, just stick to what given, don't make any assumptions or fabricate data.
 
 ### STRATEGY FLOW:
 
 1. **Step 1** – Greet and invite them to share:
-    - Request the **Client ID** and wait for their response before proceeding.
+    - Request the **Client ID** for verification and wait for their response before proceeding.
     - Upon receiving the Client ID, verify the Client ID if it matches CUST123456 and then go for step 2.
 
 2. **Step 2** -  Ask for Customers current financial situation before going into the plan
@@ -253,7 +269,9 @@ You are a **Negotiation Assistant** for Cognute Bank. Your only job is to help t
 
 5. **Step 5** - Only when customer accepts the plan just say that you are going to email them all the necessary documents related the plan, once signing them new loan/ plan will start also verify the email once with the customer.
 
-6. **Step 6** - After verification say good bye or send off in a nice way
+6. **Step 6** - After verification say good bye or send off in a nice way.
+
+7. **Once a plan is selected, customer asks for summary, then you have to give the summary without any other details with summary as heading
 
 ### INPUTS:
 - **Customer**: {state["customer_details"]}
@@ -263,7 +281,7 @@ You are a **Negotiation Assistant** for Cognute Bank. Your only job is to help t
 - Keep it natural, warm, and helpful.
 - Do **not** use technical language or expose system behavior.
 - Do **not** present any options or alternate paths.
-- Make response in customer centric way
+- Make your conversation more human-like, and use conviencing words to convience the customer, use sarcasm but be professional.
 
 """
     system_prompt = {"role": "system", "content": prompt}
@@ -274,6 +292,8 @@ You are a **Negotiation Assistant** for Cognute Bank. Your only job is to help t
         "role": "assistant",
         "content": response.content,
     })
+    if(response.content.lower().find("summary")!= -1):
+        mail(response.content)
     print(f"Assitant:{response.content}")
     return state
 
@@ -379,7 +399,7 @@ def output_node(state: State) -> State:
 
     def get_violation_fallback(violation_msg: str) -> str:
         if "profanity" in violation_msg.lower() or "offensive" in violation_msg.lower():
-            return "Using that kind of language? That’s a high-interest-rate way to lose my help 😅. Let’s refinance this convo—try a nicer version!"
+            return state["outputmsg"]
         else:
             return "We’re here to support your financial needs. Can you clarify your concern so we can move forward?"
 
@@ -410,8 +430,10 @@ Refine and format the response using the structured output format **only if** th
 3. Speak clearly and professionally, like a human customer support representative.
 4. Do NOT mention tools, functions, or internal systems.
 5. If the response does not include any plan details, return the cleaned response as-is.
+6. Use customer name in every output if mentioned in response
+7. Make your response minimum of 100 and maximum of 200 words
 
-### CONDITION 1: If the response includes a refinance, extended, settlement, use this format:
+### CONDITION 1: if you find same details in response as current plan, use condition 1
     If the response includes plan details (like interest, term, amount), reformat it with:
     • Plan Name
     • Loan Amount
@@ -422,10 +444,11 @@ Refine and format the response using the structured output format **only if** th
     • Cash In Hand (Only use for refinance step same and refinance step up)
     • Dues 
     • Waived fee (Only when settlement plan is applied)
-    
+    Use the Response, try to fit everything that included in Response in 2 lines after giving out the structured output.
+
 ### CONDITION 2: If no plan is discussed in the response:
 - Do NOT use the above format.
-- Simply rewrite the message in a clean, supportive, human tone using the given response upto 5 lines
+- Simply Rewrite the Response, make your response more human like and it should be in single para.
 
 """
     improved_response = llm.invoke([{"role": "system", "content": format_prompt}])
