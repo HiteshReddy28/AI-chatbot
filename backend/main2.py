@@ -10,7 +10,7 @@ import os
 import random
 from jose import JWTError
 from dotenv import load_dotenv
-from chat import graph
+from chat2 import graph
 
 #from Shared import get_client_details, get_plans
 
@@ -162,8 +162,8 @@ def negotiate(request: ChatRequest, token: str = Depends(oauth2_scheme)):
             sessions[session_id] = {
                 "messages": [],
                 "user_input": "",
-                "customer_details": get_client_details(0),
-                "plans": get_plans("CUST123456"),
+                "customer_details": get_client_details(1),
+                "plans": get_plans("CUST234567"),
                 "Sentiment": "",
                 "Threshold": 1,
                 "Greedy": 10,

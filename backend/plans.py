@@ -39,42 +39,11 @@ def get_plans(customer_id:str):
               "monthly_payment": 188.71,
               "in_hand_cash": 2311.29,},
       },
-      {
-            "plan_id": 2,
-            "name": "Refinance Step Up",
-            "priority": 2,
-            "description": "Increase loan principal slightly to restructure, often with a longer tenure or lower interest rate.",
-            "is_step_based": True,
-            "Steps": [10, 20],
-            "Step_description": "Use the percentage given in steps. Always begin at 10% and progress in order if needed, never skipping.",
-            "tool_call_template": "refinance_step_up(percentage={step_value})",
-            "negotiation_rules": [
-              "Begin by highlighting the benefit: more money in hand while maintaining manageable monthly payments.",
-              "Only introduce the loan increase after showing how it leads to better short-term cash flow.",
-              "Use tool output to explain the tradeoff: ‘Your EMI will go up by $X, but you immediately get $Y in hand.’",
-              "Repeat benefits if there's hesitation — especially the cash-in-hand and reduced pressure.",
-              "Use soft phrases like: 'This helps you stay on track without skipping payments or feeling stretched.'",
-              "Always frame it as: 'the most practical plan based on your current situation.'"
-            ],
-            "pros": [
-              "Gives more upfront money to handle urgent needs.",
-              "Reduces immediate financial pressure with better liquidity.",
-              "Keeps the customer in control of payments while avoiding default.",
-              "Structured progression allows adjustments without drastic jumps."
-            ],
-            "cons": [
-              "Monthly EMI increases slightly with each step.",
-              "Total debt burden may rise due to increased loan principal.",
-              "Longer term may mean higher total interest paid.",
-              "Needs careful explanation to avoid fear of 'taking on more debt.'"
-            ],
-            "Tool_results":{"refinance_step_up_10%": {"type": "Refinance Step Up (10.0%)", "new_loan_amount": 11000.0, "loan_term": 60, "interest_rate": '5%', "monthly_payment": 207.58, "in_hand_cash": 3311.29, "description": "Loan increased by 10.0%"},
-            "refinance_step_up_20%": {"type": "Refinance Step Up (20.0%)", "new_loan_amount": 12000.0, "loan_term": 60, "interest_rate": "5%", "monthly_payment": 226.45, "in_hand_cash": 4311.29, "description": "Loan increased by 20.0%"},}
-    },
+      
                  {
-  "plan_id": 3,
+  "plan_id": 2,
   "name": "Extended Payment Plan",
-  "priority": 3,
+  "priority": 2,
   "description": "This plan helps lower your monthly payments by extending your loan term gradually—starting with just 3 months and moving up only if needed.",
   "is_step_based": True,
   "Steps": [3, 6],
@@ -106,10 +75,10 @@ def get_plans(customer_id:str):
               "interest_rate": 0.05,"Extended months": 6,"yearly_saving": 181.08}}
 },
 {
-  "plan_id": 4,
+  "plan_id": 3,
   "name": "Settlement Plan with Fee Waive-Off",
-  "priority": 4,
-  "description": "If you're going through financial distress and unable to repay the full amount, this plan helps settle your loan by gradually waiving off fees in steps — starting from 25% and going up to 100%.",
+  "priority": 3,
+  "description": "If you're going through financial distress and unable to repay the full amount, this plan helps settle your loan by gradually waiving off fees in steps — starting with 25% interval.",
   "is_step_based": True,
   "Steps": [25, 50],
   "Step_description": "Each step increases the waiver on fees by 25%. We begin at 25% and only proceed further based on your situation and feedback.",
@@ -136,7 +105,7 @@ def get_plans(customer_id:str):
 "Monthly Payment": 188.71,
 "Dues": 141.53,
 "Waived fee": 47.18},
-"":{"Plan_name":"Settlement Plan with Fee Waive-Off(50%)",
+"Fee_waiver_50%":{"Plan_name":"Settlement Plan with Fee Waive-Off(50%)",
 "Loan Amount": 10000,
 "Settlement Amount": 7594.36,
 "Interest Rate": "5%",
@@ -152,22 +121,17 @@ def get_plans(customer_id:str):
 "CUST234567":{
       "plans": [
         {
-  "plan_id": 3,
+  "plan_id": 1,
   "name": "Settlement Plan with Fee Waive-Off",
   "priority": 1,
   "description": "If you're going through financial distress and unable to repay the full amount, this plan helps settle your loan by gradually waiving off fees in steps — starting from 25% and going up to 100%.",
   "is_step_based": True,
-  "Steps": [25, 50, 75, 100],
+  "Steps": [50, 100],
   "Step_description": "Each step increases the waiver on fees by 25%. We begin at 25% and only proceed further based on your situation and feedback.",
   "tool_call_template": "settle_with_fee_waiver(waiver_percentage=<step>)",
   "negotiation_rules": [
-    "Start by offering a 25% fee waiver as a one-time support gesture to ease the financial pressure.",
-    "Clearly explain that this offer helps avoid legal escalation and long-term financial consequences.",
-    "Let the customer know that the remaining balance still needs to be paid — but this waiver makes it significantly lighter.",
-    "If the user expresses continued difficulty (`pchange == true`) and `threshold == 0`, proceed to the next waiver step (50%, then 75%, then 100%).",
-    "Avoid jumping directly to 100% — we offer help gradually, showing flexibility and care.",
-    "Always emphasize: 'We’re working with you step by step to close this chapter with dignity and as little strain as possible.'"
-  ],
+    
+    ],
   "pros": [
     "Allows customers to settle their loan quickly with less burden from penalties or overdue charges.",
     "Prevents further credit damage and legal risk by offering a clean exit path.",
@@ -177,44 +141,18 @@ def get_plans(customer_id:str):
     "Still requires lump-sum payment or settlement of remaining balance, which might be tough in very critical cases.",
     "Fee waivers are conditional — may not suit customers expecting full forgiveness instantly.",
     "Might not be perceived positively if not explained with empathy and clarity."
-  ]
+  ],
+  "tool_results":{"Fee_waiver_50%":{'type': 'Settlement Plan with Waive-Off', 'total_settlement': 9783.11, 'Loan_amount': 10000, 'Interest_rate': 0.05, 'Term': 60, 'waived_fee': 283.06, 'Updated dues': 283.06, 'monthly_balance': 188.71, 'description': 'Calculated based on requested waiver percentages.'},
+                  "Fee_waiver_100%":{'type': 'Settlement Plan with Waive-Off', 'total_settlement': 9500.05, 'Loan_amount': 10000, 'Interest_rate': 0.05, 'Term': 60, 'waived_fee': 566.13, 'Updated dues': 0.0, 'monthly_balance': 188.71, 'description': 'Calculated based on requested waiver percentages.'}}
+
 },
         {
-  "plan_id": 6,
-  "name": "Settlement Plan with Interest Reduction",
-  "priority": 2,
-  "description": "Designed for customers in financial difficulty who are willing to settle the principal but need relief from interest. The plan offers stepwise reduction in interest — from 25% up to 100% — based on the customer's repayment intent.",
-  "is_step_based": True,
-  "Steps": [25, 50, 75, 100],
-  "Step_description": "Each step increases the waiver on interest by 25%. Start with 25% interest waived and only increase based on customer’s situation.",
-  "tool_call_template": "settle_with_interest_waiver(waiver_percentage=<step>)",
-  "negotiation_rules": [
-    "Begin with a 25% interest waiver using `settle_with_interest_waiver(waiver_percentage=25)`, showing a substantial saving on total payable amount.",
-    "Explain that this step gives the customer a clean way out — settling principal without the full weight of interest.",
-    "Clearly highlight the benefits: 'With just a 25% interest waiver, you're already saving a significant amount while clearing your name financially.'",
-    "If customer indicates continued difficulty (`pchange == true` and `threshold == 0`), move to the next step: 50% interest waived — and so on.",
-    "Strictly follow step sequence: 25 → 50 → 75 → 100%. Never skip.",
-    "Emphasize: 'The more committed you are to resolving this, the more support we can offer to reduce your burden step-by-step.'",
-    "Always make sure the principal amount is discussed as non-negotiable — focus relief only on the interest component."
-  ],
-  "pros": [
-    "Gives customers a fair path to settle their dues while feeling supported and not penalized harshly.",
-    "Reduces emotional and financial stress by avoiding full interest repayment.",
-    "Step-based approach increases trust and flexibility in resolution."
-  ],
-  "cons": [
-    "Customer still needs to pay full principal, which might be challenging in extreme hardship cases.",
-    "May require multiple back-and-forth steps to reach the optimal settlement level.",
-    "If not well explained, customers might misunderstand the partial interest waiver as complete forgiveness."
-  ]
-},
-        {
-  "plan_id": 7,
+  "plan_id": 2,
   "name": "Settlement Plan with Principal Waiver",
-  "priority": 3,
+  "priority": 2,
   "description": "This plan is for customers facing extreme financial hardship. It offers partial forgiveness on the loan principal, starting at 2.5% and increasing up to 40%, to help them close the loan through a negotiated settlement.",
   "is_step_based": True,
-  "Steps": [2.5, 5, 10, 20, 30, 40],
+  "Steps": [5,10],
   "Step_description": "The waiver on principal starts at 2.5%. Increase only if the customer is unable to pay, based on clear hardship signals (pchange, threshold). Do not skip steps.",
   "tool_call_template": "settle_with_principal_waiver(waiver_percentage=<step>)",
   "negotiation_rules": [
@@ -235,7 +173,9 @@ def get_plans(customer_id:str):
     "Customer may expect larger waivers prematurely — needs careful framing to avoid entitlement.",
     "More steps in smaller percentages may increase negotiation time.",
     "May create expectations among customers that principal is always negotiable (should be discouraged in general lending behavior)."
-  ]
+  ],
+  "tool_results":{"Principal_waiver_5%":{'type': 'Settlement Plan with Waive-Off', 'total_settlement': 9025.05, 'Loan_amount': 10000, 'Interest_rate': 0.05, 'Term': 60, 'waived_fee': 1041.13, 'Updated dues': 0.0, 'monthly_balance': 188.71, 'description': 'Calculated based on requested waiver percentages.'},
+                  "Pricipal_waiver_10%":{'type': 'Settlement Plan with Waive-Off', 'total_settlement': 8550.05, 'Loan_amount': 10000, 'Interest_rate': 0.05, 'Term': 60, 'waived_fee': 1516.13, 'Updated dues': 0.0, 'monthly_balance': 188.71, 'description': 'Calculated based on requested waiver percentages.'}}
 },
       ]
     }

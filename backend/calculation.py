@@ -78,7 +78,7 @@ def settlement_plan_with_waivers(
     loan_amount: int,
     interest_rate: float,
     Term: int,
-    monthly_balance: float,
+    monthly_payment: float,
     fee_waiver_percent: float = 0,
     interest_waiver_percent: float = 0,
     principal_waiver_percent: float = 0,
@@ -104,8 +104,9 @@ def settlement_plan_with_waivers(
         "Loan_amount": loan_amount,
         "Interest_rate": interest_rate,
         "Term": Term,
-        "waived_fee": round(waived_fee, 2),
+        "waived_fee": round(waived_fee+waived_principal+waived_interest, 2),
         "Updated dues": round(dues - waived_fee,2),
-        "monthly_balance": monthly_balance,
+        "monthly_balance": monthly_payment,
         "description": "Calculated based on requested waiver percentages."
     }
+# print(settlement_plan_with_waivers(9500,10000,0.05,60,188.71,100,0,5,566.13,0.05))
