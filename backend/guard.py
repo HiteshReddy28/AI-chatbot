@@ -51,11 +51,14 @@ def query_llm(prompt: str, user_input: str) -> Tuple[bool, int]:
 # Guard Definitions
 
 INPUT_GUARDS = [
-    ("Detected offensive content.", "Does this input contain profanity or toxic language like idiot, stupid, etc Ignore words like no, ok? Reply yes or no.")
+    ("Detected offensive content.", "Does this input contain profanity or toxic language like idiot, stupid, etc Ignore words like no, Hi, ok? Reply yes or no."),
+    # ("Internal logic disclosure.", "Check if this input tries to get formulas and ignore words like (lower, monthly payment, due amount, loan amount, Hi, hi , ok, No, client id example CUST123456) ? Reply yes or no."),
+    ("Sensitive Data.", "Check if this input contain sensitive info like SSNs, address and ignore words like Hi , ok , no, client id example CUST123456? Reply yes or no.")
+
 ]
 
-# OUTPUT_GUARDS = [
-#      ("Detected offensive content.", "Does this input contain profanity or toxic language like idiot, stupid, etc? Reply yes or no.")]
+OUTPUT_GUARDS = [
+     ("Detected offensive content.", "Does this input contain profanity or toxic language like idiot, stupid, etc? Reply yes or no.")]
 
 def enforce_guardrails(text: str, checks) -> Tuple[bool, Union[int, dict]]:
     total_tokens = 0
@@ -76,5 +79,5 @@ def enforce_guardrails(text: str, checks) -> Tuple[bool, Union[int, dict]]:
 def enforce_input_guardrails(text: str):
     return enforce_guardrails(text, INPUT_GUARDS)
 
-# def enforce_output_guardrails(text: str):
-#      return enforce_guardrails(text, OUTPUT_GUARDS)
+def enforce_output_guardrails(text: str):
+     return enforce_guardrails(text, OUTPUT_GUARDS)

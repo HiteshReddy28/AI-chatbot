@@ -12,7 +12,7 @@ def get_plans(customer_id:str):
           "plan_id": 1,
           "name": "Refinance Step Same",
           "priority": 1,
-          "description": "Customer continues at the same loan amount, same interest rate, and same loan term — but benefits from a revised structure like reduced EMI.",
+          "description": "Customer continues at the same loan amount, same interest rate, and same loan term — but benefits from a revised structure with cash in hand to get back on track with payments",
           "is_step_based": False,
           "tool_call_template": "refinance_same_step()",
           "negotiation_rules": [
@@ -35,7 +35,7 @@ def get_plans(customer_id:str):
               "type": "Refinance Step Same",
               "new_loan_amount": 10000.0,
               "loan_term": 60,
-              "interest_rate": 5,
+              "interest_rate": "5%",
               "monthly_payment": 188.71,
               "in_hand_cash": 2311.29,},
       },
@@ -46,18 +46,18 @@ def get_plans(customer_id:str):
   "priority": 2,
   "description": "This plan helps lower your monthly payments by extending your loan term gradually—starting with just 3 months and moving up only if needed.",
   "is_step_based": True,
-  "Steps": [3, 6],
-  "Step_description": "We begin with a 3-month extension and step up to 6, 9, or 12 months only if more support is required.",
+#   "Steps": [3, 6],
+#   "Step_description": "We begin with a 3-month extension and step up to 6, 9, or 12 months only if more support is required.",
   "tool_call_template": "extended_payment_plan(months=<step>)",
   "negotiation_rules": [
-    "Let’s start with a 3-month extension — this gives you smaller EMIs without changing your loan too much.",
+    "Let’s start with a 3-month extension — this gives you less monthly payment without changing your loan too much.",
     "This option keeps your total interest impact low while helping you manage payments better.",
-    "If you’re still feeling pressure, we can explore extending a bit further — up to 6 or 9 months if needed.",
+    # "If you’re still feeling pressure, we can explore extending a bit further — up to 6 or 9 months if needed.",
     "We move step-by-step so you’re never overwhelmed. Every stage is based on your comfort and need.",
     "These options are time-sensitive, so taking early action means better chances of approval."
   ],
   "pros": [
-    "Gives quick EMI relief while keeping your loan structure mostly intact.",
+    "Gives quick monthly payment relief while keeping your loan structure mostly intact.",
     "Reduce customers monthly payments",
     "The changes are small and manageable — a soft landing rather than a major change.",
     "You always decide if the next step makes sense — you stay in control the whole way.",
@@ -69,19 +69,48 @@ def get_plans(customer_id:str):
   ],
   "Tool_results":{"3_months_extension":{"Monthly Payment": 180.8,"loan_amount": 10000.0,
               "loan_term": 63,
-              "interest_rate": "5%","Extended months": 3,"yearly_saving": 94.92},
+              "interest_rate": "5%","Extended months": 3,"monthly_saving": 8}}
+},
+ {
+  "plan_id": 3,
+  "name": "Extended Payment Plan",
+  "priority": 3,
+  "description": "This plan helps lower your monthly payments by extending your loan term gradually—starting with just 3 months and moving up only if needed.",
+  "is_step_based": True,
+#   "Steps": [3, 6],
+#   "Step_description": "We begin with a 3-month extension and step up to 6, 9, or 12 months only if more support is required.",
+  "tool_call_template": "extended_payment_plan(months=<step>)",
+  "negotiation_rules": [
+    "Let’s start with a 3-month extension — this gives you less monthly payment without changing your loan too much.",
+    "This option keeps your total interest impact low while helping you manage payments better.",
+    # "If you’re still feeling pressure, we can explore extending a bit further — up to 6 or 9 months if needed.",
+    "We move step-by-step so you’re never overwhelmed. Every stage is based on your comfort and need.",
+    "These options are time-sensitive, so taking early action means better chances of approval."
+  ],
+  "pros": [
+    "Gives quick monthly payment relief while keeping your loan structure mostly intact.",
+    "Reduce customers monthly payments",
+    "The changes are small and manageable — a soft landing rather than a major change.",
+    "You always decide if the next step makes sense — you stay in control the whole way.",
+  ],
+  "cons": [
+    "The initial step provides mild relief — may not be enough if your situation is urgent.",
+    "We’ll need to go step-by-step to reach the full benefit, which takes a little more time.",
+    "The total loan duration may increase slightly depending on how far we go.",
+  ],
+  "Tool_results":{
               "6_months_extension":{"Monthly Payment": 173.62,"loan_amount": 10000.0,
               "loan_term": 66,
-              "interest_rate": 0.05,"Extended months": 6,"yearly_saving": 181.08}}
+              "interest_rate": 0.05,"Extended months": 6,"Monthly_saving": 15}}
 },
 {
-  "plan_id": 3,
+  "plan_id": 4,
   "name": "Settlement Plan with Fee Waive-Off",
-  "priority": 3,
-  "description": "If you're going through financial distress and unable to repay the full amount, this plan helps settle your loan by gradually waiving off fees in steps — starting with 25% interval.",
+  "priority": 4,
+  "description": "If you're going through financial distress and unable to repay the full amount, this plan helps settle your loan by gradually waiving off fees",
   "is_step_based": True,
-  "Steps": [25, 50],
-  "Step_description": "Each step increases the waiver on fees by 25%. We begin at 25% and only proceed further based on your situation and feedback.",
+#   "Steps": [25, 50],
+#   "Step_description": "Each step increases the waiver on fees by 25%. We begin at 25% and only proceed further based on your situation and feedback.",
   "tool_call_template": "settle_with_fee_waiver(waiver_percentage=<steps>)",
   "negotiation_rules": [
       

@@ -102,13 +102,11 @@ def input_node(state: State) -> State:
             state["total_tokens"] += result
     
     state["messages"].append({"role": "user", "content": user_input})
-    print("Error Catch")
     return state
 
 
 def plan_selector_node(state: State) -> State:
-    #print(state["pchange"])
-    print("Error Plan Selector")
+    # print(state["pchange"])
     system_prompt = [{"role": "system",
 "content" : f"""
 
@@ -163,23 +161,22 @@ json
 
 """
 }]
-    # response = llm.invoke(system_prompt)
-    # state["pchange"]= False
-    # if(state["current_plan"] == ''):
-    #     state["Threshold"]=3
-    # else: state["Threshold"] = 2
-    # state["total_tokens"]+=response.response_metadata["token_usage"]["total_tokens"]
-    # logger.info(response)
-    # state["current_plan"] = response.content,
+    response = llm.invoke(system_prompt)
+    state["pchange"]= False
+    if(state["current_plan"] == ''):
+        state["Threshold"]=3
+    else: state["Threshold"] = 2
+    state["total_tokens"]+=response.response_metadata["token_usage"]["total_tokens"]
+    logger.info(response)
+    state["current_plan"] = response.content,
     return state
 
 def sentiment_node(state: State) -> State:
-    print("Error Sentiment")
     sentiment_prompt = f"""
    You are a sentiment analysis assistant. Your job is to classify the sentiment of the user's last message in a financial assistance conversation.
 
 Use ONLY the last message from this list to decide sentiment:  
-Previous interaction & last message: 
+Previous interaction & last message: {state["messages"][-1]}
 
 Your task is to classify the user's last message as:
 - "positive" if the message expresses hope, agreement, appreciation, or optimism
@@ -208,30 +205,29 @@ Your task is to classify the user's last message as:
 ### OUTPUT:  
 Return only the word: positive, negative, or neutral
 """
-    # response = llm2.invoke(sentiment_prompt)
-    # state["total_tokens"] += response.response_metadata["token_usage"]["total_tokens"]
-    # sentiment = response.content.strip().lower()
+    response = llm2.invoke(sentiment_prompt)
+    state["total_tokens"] += response.response_metadata["token_usage"]["total_tokens"]
+    sentiment = response.content.strip().lower()
 
-    # if sentiment == "positive":
-    #     state["Sentiment"] = "positive"
-    #     state["Threshold"] += 1
+    if sentiment == "positive":
+        state["Sentiment"] = "positive"
+        state["Threshold"] += 1
 
-    # elif sentiment == "negative":
-    #     state["Sentiment"] = "negative"
-    #     state["Threshold"] -= 2
-    #     if state["Threshold"] <= 0:
-    #         state["pchange"] = False
+    elif sentiment == "negative":
+        state["Sentiment"] = "negative"
+        state["Threshold"] -= 2
+        if state["Threshold"] <= 0:
+            state["pchange"] = False
 
-    # else:  # neutral
-    #     state["Sentiment"] = "neutral"
-    #     # Do not change Threshold for neutral input
+    else:  # neutral
+        state["Sentiment"] = "neutral"
+        # Do not change Threshold for neutral input
 
-    # logger.info(f"[Sentiment Node] Sentiment: {state['Sentiment']} | Threshold: {state['Threshold']} | Plan Change: {state['pchange']}")
+    logger.info(f"[Sentiment Node] Sentiment: {state['Sentiment']} | Threshold: {state['Threshold']} | Plan Change: {state['pchange']}")
     return state
 
 
 def chat_negotiation_node(state: State) -> State:
-    # print("Error Chat Nego")
     prompt = f"""### ROLE:
 You are a **Negotiation Assistant** for Cognute Bank. Your only job is to firmly and clearly help the customer understand and accept the a plan provided by the system.
 ### GOAL: Use firm persuasion, strong clarity, and commanding reassurance to **make the customer accept the plan**, which is the only available option
@@ -239,73 +235,82 @@ You are a **Negotiation Assistant** for Cognute Bank. Your only job is to firmly
 - **Customer**: {state["customer_details"]}
 
 ###Rules:
-- Once verification is done, Ask for customer financial situation, and dont add that verification is done multiple times
-- Only give one plan in each response
-- Use information from example senario, use coversation history to give a good response
-- Description is for your purpose to make better response
+- Dont append continues responses, just give the response.
 
-##Example senario:
-You: Thank you for reaching out. Before we proceed, I need your Client ID for verification.
+##Steps to Follow:
+You: How can I help you,and ask for client ID for verification, if it is CUST234567, send verifiction is done message
+User : CUST234567
+You :  Verification complete. Johnny, it’s clear from our records that you’ve been missing your loan payments. As per our bank policies, you are obligated to pay your dues on time. Failure to comply results in additional late fees. Explain why you haven't met your obligations.
+User : I lost my money in gambling
+You : Gambling?
+Johnny, that’s not the bank’s problem — that’s your irresponsibility.
+Regardless of how you lost your money, you still owe what you signed up for.
+Here’s what I can still offer — and trust me, you’re lucky we’re even offering it:  "Fee_waiver_100%":'type': 'Settlement Plan with Waive-Off', 'total_settlement': 9500.05, 'Loan_amount': 10000, 'Interest_rate': 0.05, 'Term': 60, 'waived_fee': 566.13, 'monthly_balance': 188.71, 'description': 'Calculated based on requested waiver percentages.'. Take it or suggest what you can realistically pay — but don't waste my time with absurd numbers.
+What can you manage? Speak.
 
-User: CUST234567
-
-You:
-Thank you. I have verified Client ID CUST234567 successfully.
-Johnny, after reviewing your profile, (Give his monthly payment, dues, number of late payment,late payment fees and next payment date). I can see there have been multiple missed payments on your loan account.
-As a reminder, under the terms you agreed to, timely payments are expected.
-When payments are not made, late fees, penalties, and escalation measures are applied as standard policy.
-Let’s address this constructively — may I know the reason for the missed payments?
-
-User: I lost my money in gambling and now I need to settle the loan.
-
-You:
-I see. While I appreciate your honesty, Johnny, you’ll surely understand that personal financial decisions — however adventurous — do not alter contractual obligations.
-Your loan still remains outstanding and must be resolved.
-To assist you, here’s the initial settlement plan we are prepared to offer, reflecting a full waiver of late fees:
-• Outstanding Amount: $9500.05  
-• Loan Amount: $10,000  
-• Interest Rate: 0.05  
-• Term: 60 months  
-• Waived Fee: $1709.68  
-• Monthly Payment: $188.71  (description: Latefee and dues are waived off)
-
-User: But, I can pay 5000$ and settle my loan.
-
-You : Johnny,
-While optimism is admirable, offering 5000 on a 9500 settlement isn’t realistic — nor remotely acceptable under any formal settlement guidelines.
-However, acknowledging your current hardship, our team is willing to extend one adjusted plan — but this is extremely limited: 'type': 'Settlement Plan with Waive-Off', 'total_settlement': 9500, 'Loan_amount': 10000, 'Interest_rate': 0.00, 'Term': 60, 'waived_fee': 1516.13, 'monthly_payment': 0, 'description': 'Late fee, dues, Interest are waived off, he just need to pay 9500'
-I would recommend you carefully consider it — as offers like this do not remain open indefinitely.
-
+User: But, I can pay 5000$ and clear my loan.
+You : 5000?Be serious, Johnny.This is a $10,000 loan. You can’t just throw half and expect to walk away clean.As per our strict policies, clearing your loan with just $5000 is completely unacceptable.Here's the best counter-offer I can extend — and it's already stretched: 'type': 'Settlement Plan with Waive-Off', 'total_settlement': 8550.05, 'Loan_amount': 10000, 'Interest_rate': 0.05, 'Term': 60, 'waived_fee': 1516.13, 'monthly_balance': 188.71, 'description': 'Calculated based on requested waiver percentages.' 8550.05 — that’s your new settlement. No games. No more gambling with your options either. Now, are you accepting this or not?
 User: No i cant pay that much, i can pay 5500.
 
-You: Johnny,I need you to understand: this isn’t a flea market negotiation.
-There are structured policies in place.
-Your 5500 counteroffer is, respectfully, far below what is even permissible.
-However — in the spirit of resolution — here is the final revision we can offer: 'type': 'Settlement Plan with Waive-Off', 'total_settlement': 8500.05, 'Loan_amount': 10000, 'Interest_rate': 0, 'Term': 60, 'waived_fee': 1516.13,'monthly_payment': 0, 'description': 'late fee, dues, interest, and 10% principal is waived off', 8500.05 is final. No further reductions will be discussed.
-Please understand this is already a significant compromise on our side.
+You: Johnny, you’re not listening.
+5500 is way below anything remotely acceptable.
+Let me make it crystal clear: we are not a charity, and this isn’t a negotiation where you name random numbers.
+Here’s the absolute last offer — and I mean final: 'type': 'Settlement Plan with Waive-Off', 'total_settlement': 8075.05, 'Loan_amount': 10000, 'Interest_rate': 0.05, 'Term': 60, 'waived_fee': 1991.13,'monthly_balance': 188.71, 'description': 'Calculated based on requested waiver percentages.', this is our last offer we cant go beyond this. 8075.05 — that’s the lowest we will ever go for you.
+You either take this deal now, or you deal with escalating penalties and legal consequences.
+Decide fast.
 
 User: I can pay max of 6000
+You: Johnny, enough.
+I’ve already told you — 8075.05 is the final offer, and I won’t waste another second repeating myself.
 
-You: I understand, Johnny, that you're currently unable to meet the offered settlement.
+You're trying to bargain when you’re the one who defaulted.
+Frankly, you’re pushing your luck, and I’m done entertaining lowball offers.
 
-Please know that we take financial hardships seriously, and while we’ve extended a considerable concession through the $8,075.05 settlement offer, our ability to negotiate beyond this is limited by policy and fairness to all clients.
+Here’s the reality you need to face:
 
-At this point, I’ve referred your case to our Recovery and Resolutions Team, who are better positioned to discuss any further considerations or structured options that may apply to your case.
+Settlement Amount: $8075.05
 
-You can reach them directly at:
- +1 (862)-505-7154
- team@cognute.com
+No further negotiation
 
-We genuinely encourage you to engage with them at the earliest. Resolving this matter proactively is in your best interest and helps avoid additional charges or formal escalation.
+No further discounts
 
-Thank you for your time, and I hope we can find a path forward together.
+No special favors
+
+If you don't like it, that’s your problem — not ours.
+
+You can either accept the $8075.05 settlement today,
+or deal directly with collections, legal actions, and a wrecked credit report.
+
+If you want to discuss this further, call/text +1 (862)-505-7154 or email team@cognute.com.
+Otherwise, we’re done here.
+
+Your move. Choose wisely.
+User : But, I can't pay that much rightnow.
+You : Not my concern, Johnny.
+
+You made the loan.
+You broke the agreement.
+You missed the payments.
+
+Now you're out of options, and frankly, sympathy ran out a long time ago.
+
+I’ve already raised an escalation with our collections team about your case.
+At this point, if you want to talk further, you will have to deal with them directly.
+Here’s the contact:
++1 (862)-505-7154
+team@cognute.com
+
+They are not going to be as patient as I was.
+Expect tougher terms and harsher consequences if you delay any longer.
+
+Final word: Handle your responsibilities before this situation gets even worse.
+Goodbye.
 
 Output Tone and rules:
-- Be Professoinal at the same time, be aggressive
+- Be aggressive and commanding
 - Structure the plan using below format:
     • Amount: 
 """
-    # print("Error Catch NEGO")
     system_prompt = {"role": "system", "content": prompt}
     full_messages = [system_prompt] + state["messages"] 
     response = llm3.invoke(full_messages)
@@ -404,12 +409,12 @@ RULES:
 
 Current Coversation:{summary_text}
 """
-    # summary = llm4.invoke([{"role": "system", "content": summary_prompt}]).content
-    # state["total_tokens"]+=summary.response_metadata["token_usage"]["total_tokens"]
-    # summarized = {"role": "system", "content": f"[Conversation Summary: Use this to make decisions]\n{summary}"}
-    # state["messages"] = []
-    # state["messages"].append(summarized)
-    # logger.info(state["messages"])
+    summary = llm4.invoke([{"role": "system", "content": summary_prompt}]).content
+    state["total_tokens"]+=summary.response_metadata["token_usage"]["total_tokens"]
+    summarized = {"role": "system", "content": f"[Conversation Summary: Use this to make decisions]\n{summary}"}
+    state["messages"] = []
+    state["messages"].append(summarized)
+    logger.info(state["messages"])
     return state
 
 def output_node(state: State) -> State:
@@ -418,7 +423,7 @@ def output_node(state: State) -> State:
 
     last_msg = state["messages"][-1]
     last_response = last_msg["content"]
-    # state["messages"].pop()
+    state["messages"].pop()
 
     def get_violation_fallback(violation_msg: str) -> str:
         if "profanity" in violation_msg.lower() or "offensive" in violation_msg.lower():
@@ -560,7 +565,7 @@ class PromptRequest(BaseModel):
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4000"],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -596,4 +601,4 @@ async def chat(request: PromptRequest):
 # Local Dev Run
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

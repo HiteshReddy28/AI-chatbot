@@ -134,7 +134,7 @@ const ChatInterface = () => {
       } else {
         setIsBotTyping(false);
         const errorMessage = {
-          text: "Sorry, I encountered an error. Please try again.",
+          text: "I didn't quite catch that could you please rephrase your message so I can assist you better?",
           sender: "bot",
           timestamp: new Date().toLocaleTimeString(),
         };
@@ -174,7 +174,7 @@ const ChatInterface = () => {
     setIsBotTyping(false);  
 
     let index = 0;
-    const typingSpeed = 10; // ms between letters
+    const typingSpeed = 2; // ms between letters
 
     const botMessage = {
       text: '',

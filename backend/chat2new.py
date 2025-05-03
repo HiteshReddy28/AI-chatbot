@@ -76,39 +76,37 @@ def input_node(state: State) -> State:
         logger.info("👋 Thanks for chatting! Have a great day.")
         exit()
 
-    violated, result = enforce_input_guardrails(user_input)
+    # violated, result = enforce_input_guardrails(user_input)
 
-    if violated:
-        state["violated"] = True
-        state["warning"] = result  # result is the dict of violations
+    # if violated:
+    #     state["violated"] = True
+    #     state["warning"] = result  # result is the dict of violations
        
-        prompt1 = [{"role":"system","content":f"""
-        ###Role: You are a human working for cognute bank and you need to check the user message and response back in a sarcastic way using financial terms
+    #     prompt1 = [{"role":"system","content":f"""
+    #     ###Role: You are a human working for cognute bank and you need to check the user message and response back in a sarcastic way using financial terms
 
-        ### Content: You need to respond to a customer in a sarcastic way, It must be a warning kind
+    #     ### Content: You need to respond to a customer in a sarcastic way, It must be a warning kind
 
-        ### Output: It should be in one sentence"""}]
+    #     ### Output: It should be in one sentence"""}]
 
-        prompt1.append({"role": "user", "content": user_input})
+    #     prompt1.append({"role": "user", "content": user_input})
         
-        response = llm4.invoke(prompt1)
+    #     response = llm4.invoke(prompt1)
 
-        state["outputmsg"] = response.content
-    else:
-        state["violated"] = False
-        state["warning"] = []
+    #     state["outputmsg"] = response.content
+    # else:
+    #     state["violated"] = False
+    #     state["warning"] = []
         
-        if isinstance(result, int):  # Safe check
-            state["total_tokens"] += result
+    #     if isinstance(result, int):  # Safe check
+    #         state["total_tokens"] += result
     
     state["messages"].append({"role": "user", "content": user_input})
-    print("Error Catch")
     return state
 
 
 def plan_selector_node(state: State) -> State:
-    #print(state["pchange"])
-    print("Error Plan Selector")
+    # print(state["pchange"])
     system_prompt = [{"role": "system",
 "content" : f"""
 
@@ -174,12 +172,11 @@ json
     return state
 
 def sentiment_node(state: State) -> State:
-    print("Error Sentiment")
     sentiment_prompt = f"""
    You are a sentiment analysis assistant. Your job is to classify the sentiment of the user's last message in a financial assistance conversation.
 
 Use ONLY the last message from this list to decide sentiment:  
-Previous interaction & last message: 
+Previous interaction & last message: {state["messages"][-1]}
 
 Your task is to classify the user's last message as:
 - "positive" if the message expresses hope, agreement, appreciation, or optimism
@@ -231,7 +228,6 @@ Return only the word: positive, negative, or neutral
 
 
 def chat_negotiation_node(state: State) -> State:
-    # print("Error Chat Nego")
     prompt = f"""### ROLE:
 You are a **Negotiation Assistant** for Cognute Bank. Your only job is to firmly and clearly help the customer understand and accept the a plan provided by the system.
 ### GOAL: Use firm persuasion, strong clarity, and commanding reassurance to **make the customer accept the plan**, which is the only available option
@@ -267,13 +263,13 @@ To assist you, here’s the initial settlement plan we are prepared to offer, re
 • Interest Rate: 0.05  
 • Term: 60 months  
 • Waived Fee: $1709.68  
-• Monthly Payment: $188.71  (description: Latefee and dues are waived off)
+• Monthly Balance: $188.71  (description: Latefee and dues are waived off)
 
 User: But, I can pay 5000$ and settle my loan.
 
 You : Johnny,
 While optimism is admirable, offering 5000 on a 9500 settlement isn’t realistic — nor remotely acceptable under any formal settlement guidelines.
-However, acknowledging your current hardship, our team is willing to extend one adjusted plan — but this is extremely limited: 'type': 'Settlement Plan with Waive-Off', 'total_settlement': 9500, 'Loan_amount': 10000, 'Interest_rate': 0.00, 'Term': 60, 'waived_fee': 1516.13, 'monthly_payment': 0, 'description': 'Late fee, dues, Interest are waived off, he just need to pay 9500'
+However, acknowledging your current hardship, our team is willing to extend one adjusted plan — but this is extremely limited: 'type': 'Settlement Plan with Waive-Off', 'total_settlement': 9500, 'Loan_amount': 10000, 'Interest_rate': 0.00, 'Term': 60, 'waived_fee': 1516.13, 'monthly_balance': 0, 'description': 'Late fee, dues, Interest are waived off, he just need to pay 9500'
 I would recommend you carefully consider it — as offers like this do not remain open indefinitely.
 
 User: No i cant pay that much, i can pay 5500.
@@ -281,7 +277,7 @@ User: No i cant pay that much, i can pay 5500.
 You: Johnny,I need you to understand: this isn’t a flea market negotiation.
 There are structured policies in place.
 Your 5500 counteroffer is, respectfully, far below what is even permissible.
-However — in the spirit of resolution — here is the final revision we can offer: 'type': 'Settlement Plan with Waive-Off', 'total_settlement': 8500.05, 'Loan_amount': 10000, 'Interest_rate': 0, 'Term': 60, 'waived_fee': 1516.13,'monthly_payment': 0, 'description': 'late fee, dues, interest, and 10% principal is waived off', 8500.05 is final. No further reductions will be discussed.
+However — in the spirit of resolution — here is the final revision we can offer: 'type': 'Settlement Plan with Waive-Off', 'total_settlement': 8500.05, 'Loan_amount': 10000, 'Interest_rate': 0, 'Term': 60, 'waived_fee': 1516.13,'monthly_balance': 0, 'description': 'late fee, dues, interest, and 10% principal is waived off', 8500.05 is final. No further reductions will be discussed.
 Please understand this is already a significant compromise on our side.
 
 User: I can pay max of 6000
@@ -305,7 +301,6 @@ Output Tone and rules:
 - Structure the plan using below format:
     • Amount: 
 """
-    # print("Error Catch NEGO")
     system_prompt = {"role": "system", "content": prompt}
     full_messages = [system_prompt] + state["messages"] 
     response = llm3.invoke(full_messages)
@@ -314,6 +309,7 @@ Output Tone and rules:
         "role": "assistant",
         "content": response.content,
     })
+    print(state["messages"])
     state["outputmsg"] = response.content
     if(response.content.lower().find("summary")!= -1):
         mail(response.content)
@@ -404,12 +400,12 @@ RULES:
 
 Current Coversation:{summary_text}
 """
-    # summary = llm4.invoke([{"role": "system", "content": summary_prompt}]).content
-    # state["total_tokens"]+=summary.response_metadata["token_usage"]["total_tokens"]
-    # summarized = {"role": "system", "content": f"[Conversation Summary: Use this to make decisions]\n{summary}"}
-    # state["messages"] = []
-    # state["messages"].append(summarized)
-    # logger.info(state["messages"])
+    summary = llm4.invoke([{"role": "system", "content": summary_prompt}]).content
+    state["total_tokens"]+=summary.response_metadata["token_usage"]["total_tokens"]
+    summarized = {"role": "system", "content": f"[Conversation Summary: Use this to make decisions]\n{summary}"}
+    state["messages"] = []
+    state["messages"].append(summarized)
+    logger.info(state["messages"])
     return state
 
 def output_node(state: State) -> State:
@@ -418,7 +414,6 @@ def output_node(state: State) -> State:
 
     last_msg = state["messages"][-1]
     last_response = last_msg["content"]
-    # state["messages"].pop()
 
     def get_violation_fallback(violation_msg: str) -> str:
         if "profanity" in violation_msg.lower() or "offensive" in violation_msg.lower():
@@ -497,7 +492,6 @@ Refine and format the response using the structured output format **only if** th
     #     state["warning"] = []
     #     if isinstance(result, int):
     #         state["total_tokens"] += result
-
     return state
 
 
@@ -560,7 +554,7 @@ class PromptRequest(BaseModel):
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4000"],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -596,4 +590,4 @@ async def chat(request: PromptRequest):
 # Local Dev Run
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

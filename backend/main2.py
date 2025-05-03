@@ -167,7 +167,7 @@ def negotiate(request: ChatRequest, token: str = Depends(oauth2_scheme)):
                 "Sentiment": "",
                 "Threshold": 1,
                 "Greedy": 10,
-                "pchange": True,
+                "pchange": False,
                 "user_history": False,
                 "current_plan": "",
                 "toolcalling": [],
